@@ -24,6 +24,7 @@
 - **UI:** WPF (XAML + MVVM via CommunityToolkit.Mvvm)
 - **DB:** SQLite via EF Core 8 (`Microsoft.EntityFrameworkCore.Sqlite`)
 - **DI:** Microsoft.Extensions.DependencyInjection
+- **最終安裝檔打包:** **Inno Setup 6.x** → `installer/bin/HsRotaryClubSetup-v0.X.exe` (單檔 exe,非 MSI)
 
 ## Layout
 
