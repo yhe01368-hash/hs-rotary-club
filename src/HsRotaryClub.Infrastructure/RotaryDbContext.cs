@@ -22,8 +22,10 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.EnglishName).HasMaxLength(100);
             e.Property(x => x.IdNumber).HasMaxLength(20);
             e.Property(x => x.Code).IsRequired();
+            e.Property(x => x.IsCurrent).HasDefaultValue(true);
             e.HasIndex(x => x.Code).IsUnique();
             e.HasIndex(x => x.Name);
+            e.HasIndex(x => x.IsCurrent);  // 給舊版「現任社員 / 顯示刪除社員」toggle 用
         });
 
         mb.Entity<ClubCollection>(e =>

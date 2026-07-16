@@ -1,6 +1,7 @@
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using System.Reflection;
 
 namespace HsRotaryClub.SmokeTest;
 
@@ -15,6 +16,11 @@ internal static class Program
         await T03_ClubCollection();
         await T04_FriendlyClub();
         await T05_MonthlyReceivableSpec();
+        await T06_IsCurrentToggle();
+        await T07_QuickFilter();
+        await T08_WeddingAnniversary();
+        await T09_ReferrerChain();
+        await T10_DisplayAttributes();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -151,6 +157,140 @@ internal static class Program
 
             ctx.MonthlyReceivableSpecs.Remove(reloaded);
             ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T06_IsCurrentToggle()
+    {
+        await Run("T06 Member IsCurrent toggle 軟刪 CRUD", () =>
+        {
+            using var ctx = NewCtx(out _);
+            var m = new Member { Code = 880, Name = "TEST06", IsCurrent = true };
+            ctx.Members.Add(m);
+            ctx.SaveChanges();
+
+            var got = ctx.Members.First(x => x.Code == 880);
+            Assert(got.IsCurrent == true, "default IsCurrent should be true");
+
+            got.IsCurrent = false;
+            got.LeaveDate = new DateOnly(2026, 7, 17);
+            got.LeaveReason = "測試軟刪";
+            ctx.SaveChanges();
+
+            var reloaded = ctx.Members.First(x => x.Code == 880);
+            Assert(reloaded.IsCurrent == false, "IsCurrent should be false after toggle");
+            Assert(reloaded.LeaveDate == new DateOnly(2026, 7, 17), "LeaveDate not persisted");
+            Assert(reloaded.LeaveReason == "測試軟刪", "LeaveReason not persisted (中文)");
+
+            var current = ctx.Members.Where(x => x.IsCurrent).Count();
+            var resigned = ctx.Members.Where(x => !x.IsCurrent).Count();
+            // TEST06 自己被軟刪,完蛋無 current members 在這個 fresh test db
+            Assert(current == 0, $"after soft-delete, current should be 0 (got {current})");
+            Assert(resigned == 1, $"resigned should be 1 (got {resigned})");
+
+            ctx.Members.Remove(reloaded);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T07_QuickFilter()
+    {
+        await Run("T07 Member 速查 filter (name/en/code)", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.Members.Add(new Member { Code = 801, Name = "張小明", EnglishName = "MIKE", IsCurrent = true });
+            ctx.Members.Add(new Member { Code = 802, Name = "張小華", EnglishName = "ALAN", IsCurrent = true });
+            ctx.Members.Add(new Member { Code = 803, Name = "王小明", EnglishName = "JOHN", IsCurrent = true });
+            ctx.SaveChanges();
+
+            var zhangs = ctx.Members.Where(m => m.Name.Contains("張")).Count();
+            Assert(zhangs >= 2, $"expected 2+ 張, got {zhangs}");
+
+            var alan = ctx.Members.FirstOrDefault(m => m.EnglishName == "ALAN");
+            Assert(alan is not null, "ALAN not found");
+
+            var code803 = ctx.Members.FirstOrDefault(m => m.Code == 803);
+            Assert(code803 is not null && code803.Name == "王小明", "code 803 lookup wrong");
+
+            foreach (var x in new[] { 801, 802, 803 })
+                ctx.Members.Remove(ctx.Members.First(m => m.Code == x));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T08_WeddingAnniversary()
+    {
+        await Run("T08 Member 配偶 + 結婚紀念日 round-trip", () =>
+        {
+            using var ctx = NewCtx(out _);
+            var m = new Member
+            {
+                Code = 850,
+                Name = "TEST08",
+                SpouseName = "配偶 A",
+                WeddingAnniversary = new DateOnly(2010, 6, 1),
+                IsCurrent = true,
+            };
+            ctx.Members.Add(m);
+            ctx.SaveChanges();
+
+            var got = ctx.Members.First(x => x.Code == 850);
+            Assert(got.SpouseName == "配偶 A", "spouse 中文 NOT persisted");
+            Assert(got.WeddingAnniversary == new DateOnly(2010, 6, 1), "wedding date mismatch");
+
+            got.SpouseName = "配偶 B 改";
+            got.WeddingAnniversary = new DateOnly(2015, 12, 25);
+            ctx.SaveChanges();
+
+            var reload = ctx.Members.First(x => x.Code == 850);
+            Assert(reload.SpouseName == "配偶 B 改", "spouse update not persisted");
+            Assert(reload.WeddingAnniversary == new DateOnly(2015, 12, 25), "wedding update mismatch");
+
+            ctx.Members.Remove(reload);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T09_ReferrerChain()
+    {
+        await Run("T09 Member 介紹人自參照 (Code-int FK-like)", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.Members.Add(new Member { Code = 901, Name = "介紹人 P", IsCurrent = true });
+            ctx.Members.Add(new Member { Code = 902, Name = "被介紹人 Q", ReferrerCode = 901, ReferrerName = "介紹人 P", IsCurrent = true });
+            ctx.SaveChanges();
+
+            var q = ctx.Members.First(m => m.Code == 902);
+            Assert(q.ReferrerCode == 901, "ReferrerCode not persisted");
+            Assert(q.ReferrerName == "介紹人 P", "ReferrerName not persisted");
+
+            var referrals = ctx.Members.Where(m => m.ReferrerCode == 901).ToList();
+            Assert(referrals.Any(m => m.Code == 902), "referral lookup failed");
+
+            foreach (var x in new[] { 901, 902 })
+                ctx.Members.Remove(ctx.Members.First(m => m.Code == x));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T10_DisplayAttributes()
+    {
+        await Run("T10 Member [Display(Name=\"...\")] 中文 metadata", () =>
+        {
+            var props = typeof(Member)
+                .GetProperties()
+                .Where(p => p.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), inherit: true).Any())
+                .ToDictionary(
+                    p => p.Name,
+                    p => p.GetCustomAttribute<System.ComponentModel.DataAnnotations.DisplayAttribute>()!.GetName() ?? p.Name);
+
+            Assert(props.ContainsKey("Name"), "Name Display attr missing");
+            Assert(props["Name"] == "社友姓名", $"Name header '{props["Name"]}'");
+            Assert(props["Code"] == "社員編號", $"Code header '{props["Code"]}'");
+            Assert(props["IdNumber"] == "身份証字號", $"IdNumber header '{props["IdNumber"]}'");
+            Assert(props["WeddingAnniversary"] == "結婚紀念日", $"WeddingAnniversary header '{props["WeddingAnniversary"]}'");
+            Assert(props["IsCurrent"] == "現任", $"IsCurrent header '{props["IsCurrent"]}'");
+            Assert(props.GetValueOrDefault("Rid") == "RID", $"RID header wrong: '{props.GetValueOrDefault("Rid")}'");
         });
     }
 
