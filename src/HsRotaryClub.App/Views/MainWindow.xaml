@@ -1,0 +1,40 @@
+<Window x:Class="HsRotaryClub.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:HsRotaryClub.App.ViewModels"
+        Title="豐原西南扶輪社社務行政系統"
+        Width="1100" Height="720"
+        WindowStartupLocation="CenterScreen">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="220"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 側邊導航 -->
+        <Border Background="#2E5C8A">
+            <StackPanel Margin="10">
+                <TextBlock Text="社務模組" Foreground="White" FontSize="16" FontWeight="Bold" Margin="8,12,8,16"/>
+                <ItemsControl ItemsSource="{Binding Modules}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding Title}"
+                                    Margin="2,2"
+                                    Padding="10,8"
+                                    HorizontalContentAlignment="Left"
+                                    FontSize="14"
+                                    Click="OnNavClick"
+                                    Tag="{Binding}"
+                                    Background="#3F77AC"
+                                    Foreground="White"
+                                    BorderBrush="#5A91BD"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <!-- 主內容 -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentView}" Margin="0"/>
+    </Grid>
+</Window>

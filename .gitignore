@@ -1,0 +1,35 @@
+# Build / IDE
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# Rider / VS
+.idea/
+*.swp
+*.swo
+
+# Test / cache
+TestResults/
+artifacts/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+*.lnk
+
+# Sensitive
+*.pfx
+*.p12
+*.key
+appsettings.Local.json
+secrets.json
+local.db
+*.db-shm
+*.db-wal
+
+# Published binaries
+publish/
+dist/

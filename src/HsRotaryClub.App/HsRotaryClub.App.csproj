@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>HsRotaryClub.App</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Authors>Chia Chang</Authors>
+    <Company>HsRotaryClub</Company>
+    <Description>扶輪社社務行政系統 — WPF 主程式</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\HsRotaryClub.Domain\HsRotaryClub.Domain.csproj" />
+    <ProjectReference Include="..\HsRotaryClub.Infrastructure\HsRotaryClub.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>
