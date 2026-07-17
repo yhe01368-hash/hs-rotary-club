@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HsRotaryClub.Domain;
 
 /// <summary>
@@ -9,34 +11,37 @@ public class ClubCollection
 {
     public int Id { get; set; }
 
-    /// <summary>西元年度 (例:2026)</summary>
+    [Display(Name = "西元")]
     public int Year { get; set; }
 
-    /// <summary>月份 (1~12)</summary>
+    [Display(Name = "月份")]
     public int Month { get; set; }
 
-    /// <summary>收款日期</summary>
+    [Display(Name = "收款日期")]
     public DateOnly CollectionDate { get; set; }
 
-    /// <summary>收款的社員 (FK to Member)</summary>
+    [Display(Name = "社員編號")]
     public int MemberCode { get; set; }
 
-    /// <summary>收款類別 (會費 / 臨時捐款 / 例餐 / 雜項 ...)</summary>
+    [Display(Name = "社員姓名")]
+    public string MemberName { get; set; } = string.Empty;
+
+    [Display(Name = "收款類別")]
     public string Category { get; set; } = string.Empty;
 
-    /// <summary>收現金</summary>
+    [Display(Name = "收現金")]
     public decimal CashAmount { get; set; }
 
-    /// <summary>票據金額</summary>
+    [Display(Name = "票據金額")]
     public decimal CheckAmount { get; set; }
 
-    /// <summary>合計金額 = CashAmount + CheckAmount</summary>
+    [Display(Name = "合計金額")]
     public decimal TotalAmount => CashAmount + CheckAmount;
 
-    /// <summary>帳單 / 收據編號</summary>
+    [Display(Name = "帳單")]
     public string? ReceiptNo { get; set; }
 
-    /// <summary>收款人 (記錄誰經手)</summary>
+    [Display(Name = "收款人")]
     public string? Collector { get; set; }
 }
 
@@ -48,20 +53,27 @@ public class MonthlyReceivableSpec
 {
     public int Id { get; set; }
 
+    [Display(Name = "年度")]
     public int Year { get; set; }
+
+    [Display(Name = "月份")]
     public int Month { get; set; }
 
-    /// <summary>應收對象 (FK to Member)</summary>
+    [Display(Name = "社員編號")]
     public int MemberCode { get; set; }
 
-    /// <summary>應收項目 (例:例餐費 / 會費 / 基金會捐款 / RI捐款 ...)</summary>
+    [Display(Name = "社員姓名")]
+    public string? MemberName { get; set; }
+
+    [Display(Name = "應收項目")]
     public string Item { get; set; } = string.Empty;
 
-    /// <summary>應收金額</summary>
+    [Display(Name = "應收金額")]
     public decimal Amount { get; set; }
 
-    /// <summary>已實際收入金額 (跨多筆收款累計)</summary>
+    [Display(Name = "已收金額")]
     public decimal SettledAmount { get; set; }
 
+    [Display(Name = "未收金額")]
     public decimal OutstandingAmount => Amount - SettledAmount;
 }

@@ -1,6 +1,8 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HsRotaryClub.App.Controls;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,12 +14,22 @@ public partial class ClubCollectionViewModel : ObservableObject
     private readonly RotaryDbContext _db;
 
     public ObservableCollection<ClubCollection> Collections { get; } = new();
+    public ObservableCollection<MonthlyReceivableSpec> ReceivableSpecs { get; } = new();
+
+    [ObservableProperty]
+    private ClubCollection? _selected;
 
     [ObservableProperty]
     private int _year = DateTime.Today.Year;
 
     [ObservableProperty]
     private int _month = DateTime.Today.Month;
+
+    [ObservableProperty]
+    private string _filter = string.Empty;
+
+    [ObservableProperty]
+    private string _statusMessage = "就緒";
 
     public ClubCollectionViewModel(RotaryDbContext db)
     {
@@ -27,17 +39,36 @@ public partial class ClubCollectionViewModel : ObservableObject
 
     partial void OnYearChanged(int value) => Reload();
     partial void OnMonthChanged(int value) => Reload();
+    partial void OnFilterChanged(string value) => Reload();
 
     [RelayCommand]
     private void Reload()
     {
+        var q = _db.ClubCollections.AsNoTracking().AsQueryable();
+        q = q.Where(c => c.Year == Year && c.Month == Month);
+        if (!string.IsNullOrWhiteSpace(Filter))
+        {
+            q = q.Where(c =>
+                c.MemberName.Contains(Filter) ||
+                c.Category.Contains(Filter) ||
+                c.MemberCode.ToString().Contains(Filter));
+        }
+
         Collections.Clear();
-        var rows = _db.ClubCollections
+        foreach (var c in q.OrderBy(c => c.CollectionDate).ToList())
+            Collections.Add(c);
+        Selected = Collections.FirstOrDefault();
+
+        // 月度應收 (同年月)
+        var specs = _db.MonthlyReceivableSpecs
             .AsNoTracking()
-            .Where(c => c.Year == Year && c.Month == Month)
-            .OrderBy(c => c.CollectionDate)
+            .Where(s => s.Year == Year && s.Month == Month)
+            .OrderBy(s => s.MemberCode)
             .ToList();
-        foreach (var r in rows) Collections.Add(r);
+        ReceivableSpecs.Clear();
+        foreach (var s in specs) ReceivableSpecs.Add(s);
+
+        StatusMessage = $"載入 {Collections.Count} 筆收款 / {ReceivableSpecs.Count} 筆應收 ({Year}-{Month:D2})";
     }
 
     [RelayCommand]
@@ -49,19 +80,99 @@ public partial class ClubCollectionViewModel : ObservableObject
             CollectionDate = new DateOnly(Year, Month, 1),
             Category = "會費",
             MemberCode = 0,
+            MemberName = "(待選)",
         };
         _db.ClubCollections.Add(c);
-        _db.SaveChanges();
+        if (!_db.TrySaveChanges(out var error))
+        {
+            StatusMessage = $"新增失敗: {error}";
+            return;
+        }
         Reload();
+        Selected = Collections.FirstOrDefault(x => x.Id == c.Id);
+    }
+
+    [RelayCommand]
+    private void Save()
+    {
+        if (Selected is null) { StatusMessage = "沒有選到"; return; }
+        var attached = _db.ClubCollections.FirstOrDefault(c => c.Id == Selected.Id);
+        if (attached is null) { StatusMessage = "DB 找不到"; return; }
+        _db.Entry(attached).CurrentValues.SetValues(Selected);
+        if (!_db.TrySaveChanges(out var error))
+        {
+            StatusMessage = $"儲存失敗: {error}";
+            return;
+        }
+        StatusMessage = $"已儲存 #{attached.Id}";
     }
 
     [RelayCommand]
     private void Delete()
     {
-        var sel = Collections.FirstOrDefault();
-        if (sel is null) return;
-        _db.ClubCollections.Remove(sel);
-        _db.SaveChanges();
+        if (Selected is null) { StatusMessage = "沒有選到"; return; }
+        var attached = _db.ClubCollections.FirstOrDefault(c => c.Id == Selected.Id);
+        if (attached is null) { StatusMessage = "DB 找不到"; return; }
+        _db.ClubCollections.Remove(attached);
+        if (!_db.TrySaveChanges(out var error))
+        {
+            StatusMessage = $"刪除失敗: {error}";
+            return;
+        }
+        StatusMessage = $"已刪除 #{attached.Id}";
+        Reload();
+    }
+
+    [RelayCommand]
+    private void PickMember()
+    {
+        var picked = MemberLookupDialog.Ask();
+        if (picked is null || Selected is null) return;
+        Selected.MemberCode = picked.Code;
+        Selected.MemberName = picked.Name;
+        StatusMessage = $"已綁社員: {picked.Code} {picked.Name}";
+    }
+
+    [RelayCommand]
+    private void ExportCsv()
+    {
+        try
+        {
+            var path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                $"HsRotaryClub_收款_{Year}-{Month:D2}.csv");
+            CsvExporter.WriteCsv(path, Collections.ToList());
+            StatusMessage = $"已匯出 {Collections.Count} 筆 → {path}";
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"匯出失敗: {ex.Message}";
+        }
+    }
+
+    /// <summary>針對選到的 spec 自動算出目前已收 (sum 同月同社員同項目) — 給儲存按鈕用。</summary>
+    [RelayCommand]
+    private void RecomputeSpec()
+    {
+        if (Selected is null) { StatusMessage = "先選一筆收款"; return; }
+        var spec = ReceivableSpecs.FirstOrDefault(s =>
+            s.MemberCode == Selected.MemberCode &&
+            Year == s.Year && Month == s.Month);
+        if (spec is null)
+        {
+            StatusMessage = "找不到對應的應收項目 (ReceivableSpec)";
+            return;
+        }
+        spec.SettledAmount = Collections
+            .Where(c => c.MemberCode == Selected.MemberCode && c.Category == spec.Item)
+            .Sum(c => c.CashAmount + c.CheckAmount);
+        _db.MonthlyReceivableSpecs.Update(spec);
+        if (!_db.TrySaveChanges(out var error))
+        {
+            StatusMessage = $"Recompute 儲存失敗: {error}";
+            return;
+        }
+        StatusMessage = $"#{spec.MemberCode} {spec.Item} 已收 → {spec.SettledAmount} / {spec.Amount}";
         Reload();
     }
 }

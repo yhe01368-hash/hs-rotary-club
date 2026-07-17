@@ -23,6 +23,10 @@ internal static class Program
         await T10_DisplayAttributes();
         await T11_TrySaveChangesExtension();
         await T12_QuickFilterReflection();
+        await T13_CsvExporter();
+        await T14_MultiCollectionSameMember();
+        await T15_YearMonthFiltering();
+        await T16_RecomputeSpec();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -359,6 +363,154 @@ internal static class Program
             ctx.ChangeTracker.Clear();
             ctx.Members.Remove(ctx.Members.First(m => m.Code == 721));
             ctx.Members.Remove(ctx.Members.First(m => m.Code == 722));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T13_CsvExporter()
+    {
+        await Run("T13 CsvExporter UTF-8 BOM + Display header", () =>
+        {
+            var rows = new[]
+            {
+                new Member { Code = 730, Name = "張小明", EnglishName = "MIKE", Mobile = "0912-345-678", Birthday = new(1990, 5, 1), IsCurrent = true },
+                new Member { Code = 731, Name = "陳小美,女", EnglishName = "ALAN", Mobile = null, Birthday = new(1992, 6, 15), IsCurrent = false },
+            };
+            var tmp = Path.Combine(Path.GetTempPath(), $"csvtest-{Guid.NewGuid():N}.csv");
+            try
+            {
+                CsvExporter.WriteCsv(tmp, rows);
+
+                // 1. BOM
+                var raw = File.ReadAllBytes(tmp);
+                Assert(raw.Length >= 3 && raw[0] == 0xEF && raw[1] == 0xBB && raw[2] == 0xBF, "BOM missing");
+
+                // 2. Header 必須含 Display 屬性的中文
+                var text = File.ReadAllText(tmp, System.Text.Encoding.UTF8);
+                Assert(text.Contains("社員編號"), "header should contain 社員編號");
+                Assert(text.Contains("社友姓名"), "header should contain 社友姓名");
+                Assert(text.Contains("現任"), "header should contain 現任");
+
+                // 3. 資料行:含 CSV escape 的逗號 / quoted field
+                Assert(text.Contains("\"陳小美,女\""), "name with comma should be quoted");
+                Assert(text.Contains("MIKE"), "should have english name");
+
+                // 4. MemberName 不存在 display attr,所以用原始欄位名
+                Assert(!text.Contains("MemberName"), "raw property name should NOT leak: MemberName");
+            }
+            finally
+            {
+                if (File.Exists(tmp)) File.Delete(tmp);
+            }
+        });
+    }
+
+    private static async Task T14_MultiCollectionSameMember()
+    {
+        await Run("T14 同社員同月多筆 ClubCollection Sum 跟 TotalAmount", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.Members.Add(new Member { Code = 740, Name = "T14 王", IsCurrent = true });
+            ctx.Members.Add(new Member { Code = 741, Name = "T14 李", IsCurrent = true });
+            ctx.SaveChanges();
+
+            ctx.ClubCollections.AddRange(
+                new ClubCollection { Year = 2026, Month = 8, CollectionDate = new(2026, 8, 1), Category = "會費", MemberCode = 740, MemberName = "T14 王", CashAmount = 1000m, CheckAmount = 0m },
+                new ClubCollection { Year = 2026, Month = 8, CollectionDate = new(2026, 8, 5), Category = "會費", MemberCode = 740, MemberName = "T14 王", CashAmount = 500m, CheckAmount = 500m },
+                new ClubCollection { Year = 2026, Month = 8, CollectionDate = new(2026, 8, 10), Category = "例餐", MemberCode = 740, MemberName = "T14 王", CashAmount = 200m, CheckAmount = 0m },
+                new ClubCollection { Year = 2026, Month = 8, CollectionDate = new(2026, 8, 2), Category = "會費", MemberCode = 741, MemberName = "T14 李", CashAmount = 1500m, CheckAmount = 0m });
+            ctx.SaveChanges();
+
+            var wang = ctx.ClubCollections
+                .Where(c => c.Year == 2026 && c.Month == 8 && c.MemberCode == 740)
+                .AsEnumerable();
+            Assert(wang.Count() == 3, "wang should have 3 collections");
+            var total = wang.Sum(c => c.CashAmount + c.CheckAmount);
+            Assert(total == 2200m, $"wang total should be 2200 (1000+500+200+500), got {total}");
+
+            // total by category 同月同社員
+            var wangFeeRows = ctx.ClubCollections.Where(c =>
+                c.Year == 2026 && c.Month == 8 && c.MemberCode == 740 && c.Category == "會費")
+                .AsEnumerable();
+            Assert(wangFeeRows.Sum(c => c.CashAmount + c.CheckAmount) == 2000m,
+                $"wang 會費 should be 2000, got {wangFeeRows.Sum(c => c.CashAmount + c.CheckAmount)}");
+
+            // Cleanup
+            ctx.ClubCollections.RemoveRange(ctx.ClubCollections.Where(c => c.Year == 2026 && c.Month == 8));
+            ctx.Members.RemoveRange(ctx.Members.Where(m => m.Code == 740 || m.Code == 741));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T15_YearMonthFiltering()
+    {
+        await Run("T15 Year/Month 切換查詢是隔離的", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.Members.Add(new Member { Code = 750, Name = "T15", IsCurrent = true });
+            ctx.ClubCollections.AddRange(
+                new ClubCollection { Year = 2026, Month = 1, CollectionDate = new(2026, 1, 5), Category = "會費", MemberCode = 750, MemberName = "T15", CashAmount = 100m },
+                new ClubCollection { Year = 2026, Month = 5, CollectionDate = new(2026, 5, 5), Category = "會費", MemberCode = 750, MemberName = "T15", CashAmount = 200m },
+                new ClubCollection { Year = 2025, Month = 5, CollectionDate = new(2025, 5, 5), Category = "會費", MemberCode = 750, MemberName = "T15", CashAmount = 300m });
+            ctx.SaveChanges();
+
+            // 2026/5 only
+            var may = ctx.ClubCollections.Where(c => c.Year == 2026 && c.Month == 5).ToList();
+            Assert(may.Count == 1 && may[0].CashAmount == 200m, "should only see 2026-5 row");
+
+            // 2025/5 only (different year)
+            var lastYearMay = ctx.ClubCollections.Where(c => c.Year == 2025 && c.Month == 5).ToList();
+            Assert(lastYearMay.Count == 1 && lastYearMay[0].CashAmount == 300m, "should only see 2025-5 row");
+
+            // Cleanup
+            ctx.ClubCollections.RemoveRange(ctx.ClubCollections.Where(c => c.MemberCode == 750));
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 750));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T16_RecomputeSpec()
+    {
+        await Run("T16 ReceivableSpec.SettledAmount 由多筆 Collection 加總後持久化", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.Members.Add(new Member { Code = 760, Name = "T16 蔡", IsCurrent = true });
+            ctx.SaveChanges();
+
+            var spec = new MonthlyReceivableSpec
+            {
+                Year = 2026, Month = 9,
+                MemberCode = 760,
+                MemberName = "T16 蔡",
+                Item = "會費",
+                Amount = 2000m,
+                SettledAmount = 0m,
+            };
+            ctx.MonthlyReceivableSpecs.Add(spec);
+            ctx.SaveChanges();
+
+            ctx.ClubCollections.AddRange(
+                new ClubCollection { Year = 2026, Month = 9, CollectionDate = new(2026, 9, 1), Category = "會費", MemberCode = 760, MemberName = "T16 蔡", CashAmount = 700m, CheckAmount = 0m },
+                new ClubCollection { Year = 2026, Month = 9, CollectionDate = new(2026, 9, 8), Category = "會費", MemberCode = 760, MemberName = "T16 蔡", CashAmount = 300m, CheckAmount = 200m });
+            ctx.SaveChanges();
+
+            // VM 邏輯:加總同月同社員同 Category
+            var actualSettled = ctx.ClubCollections
+                .Where(c => c.Year == 2026 && c.Month == 9 && c.MemberCode == 760 && c.Category == spec.Item)
+                .AsEnumerable()
+                .Sum(c => c.CashAmount + c.CheckAmount);
+            Assert(actualSettled == 1200m, $"should sum to 1200 (700+300+200), got {actualSettled}");
+
+            spec.SettledAmount = actualSettled;
+            ctx.SaveChanges();
+            var reload = ctx.MonthlyReceivableSpecs.First(s => s.Id == spec.Id);
+            Assert(reload.SettledAmount == 1200m, "settled not persisted");
+            Assert(reload.OutstandingAmount == 800m, "outstanding should be 2000 - 1200 = 800");
+
+            // Cleanup
+            ctx.ClubCollections.RemoveRange(ctx.ClubCollections.Where(c => c.Year == 2026 && c.Month == 9));
+            ctx.MonthlyReceivableSpecs.Remove(reload);
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 760));
             ctx.SaveChanges();
         });
     }
