@@ -40,6 +40,7 @@ internal static class Program
         await T27_MainWindowSize();
         await T28_ClubEntityCRUD();
         await T29_ClubManagementViewModel();
+        await T30_MemberClubIdFilter();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -940,6 +941,62 @@ internal static class Program
             Assert(SeedData.DefaultClubId == 1, "DefaultClubId should be 1");
 
             // 清理
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T30_MemberClubIdFilter()
+    {
+        await Run("T30 Member 跨社 filter: ClubId 隔離", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // 建 2 個社
+            var fysw = new Club { Name = "T30 豐原西南", IsActive = true };
+            var tcwb = new Club { Name = "T30 台中西北", IsActive = true };
+            ctx.Clubs.AddRange(fysw, tcwb);
+            ctx.SaveChanges();
+
+            // 同名社員「張小明」在不同社
+            var mFysw = new Member { Code = 100, Name = "張小明", ClubId = fysw.Id, IsCurrent = true };
+            var mTcwb = new Member { Code = 100, Name = "張小明", ClubId = tcwb.Id, IsCurrent = true };
+            ctx.Members.AddRange(mFysw, mTcwb);
+            ctx.SaveChanges();
+
+            // 同 Code (100) 但不同 ClubId — 應該都 OK (因為 unique 只擋 Code exact match,但不同 ClubId 允許)
+            // 確認:兩人都存在
+            var all = ctx.Members.AsNoTracking().Where(m => m.Name == "張小明").ToList();
+            Assert(all.Count == 2, $"should have 2 張小明, got {all.Count}");
+            Assert(all.Any(m => m.ClubId == fysw.Id), "fysw 張小明 missing");
+            Assert(all.Any(m => m.ClubId == tcwb.Id), "tcwb 張小明 missing");
+
+            // filter 跨社: 選 fysw 只看到 fysw 的張小明
+            var fyswMembers = ctx.Members.AsNoTracking()
+                .Where(m => m.ClubId == fysw.Id).ToList();
+            Assert(fyswMembers.Count == 1, $"fysw should have 1 member, got {fyswMembers.Count}");
+            Assert(fyswMembers[0].Code == 100, "fysw member code should be 100");
+
+            var tcwbMembers = ctx.Members.AsNoTracking()
+                .Where(m => m.ClubId == tcwb.Id).ToList();
+            Assert(tcwbMembers.Count == 1, $"tcwb should have 1 member, got {tcwbMembers.Count}");
+
+            // 收費 也走 ClubId 過濾
+            var cFysw = new ClubCollection
+            {
+                ClubId = fysw.Id, Year = 2026, Month = 7,
+                CollectionDate = new(2026, 7, 1), Category = "會費",
+                MemberCode = 100, MemberName = "張小明",
+                CashAmount = 1500m
+            };
+            ctx.ClubCollections.Add(cFysw);
+            ctx.SaveChanges();
+            var fyswCol = ctx.ClubCollections.AsNoTracking().Where(c => c.ClubId == fysw.Id).ToList();
+            Assert(fyswCol.Count == 1, $"fysw should have 1 collection, got {fyswCol.Count}");
+
+            // 清理
+            foreach (var c in ctx.ClubCollections.ToList()) ctx.ClubCollections.Remove(c);
+            foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
         });

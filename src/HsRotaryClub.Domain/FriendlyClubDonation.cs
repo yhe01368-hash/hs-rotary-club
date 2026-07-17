@@ -10,6 +10,9 @@ public class FriendlyClub
 {
     public int Id { get; set; }
 
+    [Display(Name = "所屬社")]
+    public int ClubId { get; set; } = HsRotaryClub.Domain.ClubDefaults.DefaultClubId;
+
     [Display(Name = "社團代號")]
     public string ClubCode { get; set; } = string.Empty;
 

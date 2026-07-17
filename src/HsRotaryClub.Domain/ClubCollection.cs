@@ -11,6 +11,9 @@ public class ClubCollection
 {
     public int Id { get; set; }
 
+    [Display(Name = "所屬社")]
+    public int ClubId { get; set; } = HsRotaryClub.Domain.ClubDefaults.DefaultClubId;
+
     [Display(Name = "西元")]
     public int Year { get; set; }
 
@@ -52,6 +55,9 @@ public class ClubCollection
 public class MonthlyReceivableSpec
 {
     public int Id { get; set; }
+
+    [Display(Name = "所屬社")]
+    public int ClubId { get; set; } = HsRotaryClub.Domain.ClubDefaults.DefaultClubId;
 
     [Display(Name = "年度")]
     public int Year { get; set; }

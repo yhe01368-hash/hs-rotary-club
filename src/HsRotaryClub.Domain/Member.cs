@@ -3,12 +3,26 @@ using System.ComponentModel.DataAnnotations;
 namespace HsRotaryClub.Domain;
 
 /// <summary>
+/// v0.7 — 各 entity 歸屬某個 Club (ClubId FK)。預設值 = 1 (預設社「豐原西南扶輪社」)
+/// 由 SeedData 在 db migrate 後寫入 id=1。
+/// </summary>
+public static class ClubDefaults
+{
+    public const int DefaultClubId = 1;
+}
+
+/// <summary>
 /// 社員基本資料。
 /// 對應舊版 <c>TS81.mdb</c> 主檔;欄位名大致依「社員基本資料維護」畫面擷取。
+/// v0.7 開始歸屬某個 Club (ClubId FK)。
 /// </summary>
 public class Member
 {
     public int Id { get; set; }
+
+    /// <summary>FK Club — v0.7 A2 引入</summary>
+    [Display(Name = "所屬社")]
+    public int ClubId { get; set; } = ClubDefaults.DefaultClubId;
 
     [Display(Name = "社員編號")]
     public int Code { get; set; }

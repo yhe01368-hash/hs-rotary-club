@@ -37,9 +37,11 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.IdNumber).HasMaxLength(20);
             e.Property(x => x.Code).IsRequired();
             e.Property(x => x.IsCurrent).HasDefaultValue(true);
-            e.HasIndex(x => x.Code).IsUnique();
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Code }).IsUnique();
             e.HasIndex(x => x.Name);
-            e.HasIndex(x => x.IsCurrent);  // 給舊版「現任社員 / 顯示刪除社員」toggle 用
+            e.HasIndex(x => x.IsCurrent);
+            e.HasIndex(x => x.ClubId);  // v0.7 A2: 多社 filter
         });
 
         mb.Entity<ClubCollection>(e =>
@@ -48,8 +50,10 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.Category).HasMaxLength(50).IsRequired();
             e.Property(x => x.CashAmount).HasDefaultValue(0m);
             e.Property(x => x.CheckAmount).HasDefaultValue(0m);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
             e.HasIndex(x => new { x.Year, x.Month });
             e.HasIndex(x => x.MemberCode);
+            e.HasIndex(x => x.ClubId);  // v0.7 A2
         });
 
         mb.Entity<MonthlyReceivableSpec>(e =>
@@ -58,7 +62,9 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.Item).HasMaxLength(50).IsRequired();
             e.Property(x => x.Amount).HasDefaultValue(0m);
             e.Property(x => x.SettledAmount).HasDefaultValue(0m);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
             e.HasIndex(x => new { x.Year, x.Month, x.MemberCode });
+            e.HasIndex(x => x.ClubId);  // v0.7 A2
         });
 
         mb.Entity<FriendlyClub>(e =>
@@ -66,7 +72,9 @@ public class RotaryDbContext : DbContext
             e.HasKey(x => x.Id);
             e.Property(x => x.ClubCode).HasMaxLength(20).IsRequired();
             e.Property(x => x.ClubName).HasMaxLength(80).IsRequired();
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
             e.HasIndex(x => x.ClubCode).IsUnique();
+            e.HasIndex(x => x.ClubId);  // v0.7 A2
         });
 
         mb.Entity<ClubDonation>(e =>
