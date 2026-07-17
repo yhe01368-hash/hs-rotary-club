@@ -19,6 +19,9 @@
             <DataTemplate DataType="{x:Type vm:HomeViewModel}">
                 <views:HomePage/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:ClubManagementViewModel}">
+                <views:ClubManagementPage/>
+            </DataTemplate>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

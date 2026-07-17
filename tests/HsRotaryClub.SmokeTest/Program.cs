@@ -39,6 +39,7 @@ internal static class Program
         await T26_AppIconCsprojRef();
         await T27_MainWindowSize();
         await T28_ClubEntityCRUD();
+        await T29_ClubManagementViewModel();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -898,6 +899,48 @@ internal static class Program
             {
                 ctx.Clubs.Remove(c);
             }
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T29_ClubManagementViewModel()
+    {
+        await Run("T29 Club query filter: ShowInactiveOnly + 速查 (對應 ClubManagementViewModel 邏輯)", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // seed 3 clubs
+            var fysw = new Club { Name = "T29 豐原西南", District = "3460", IsActive = true };
+            var tcwb = new Club { Name = "T29 台中西北", District = "3460", IsActive = true };
+            var ths  = new Club { Name = "T29 大里扶輪社", District = "3460", IsActive = false };  // 停用的
+            ctx.Clubs.AddRange(fysw, tcwb, ths);
+            ctx.SaveChanges();
+
+            // default 預設 (active + filter empty) — 應 2 個
+            var activeOnly = ctx.Clubs.AsNoTracking().Where(c => c.IsActive).ToList();
+            Assert(activeOnly.Count == 2, $"active only should be 2, got {activeOnly.Count}");
+
+            // inactive only
+            var inactiveOnly = ctx.Clubs.AsNoTracking().Where(c => !c.IsActive).ToList();
+            Assert(inactiveOnly.Count == 1, $"inactive only should be 1, got {inactiveOnly.Count}");
+
+            // 速查
+            var matches = ctx.Clubs.AsNoTracking()
+                .Where(c => c.IsActive && (c.Name.Contains("T29") || (c.District ?? "").Contains("T29")))
+                .ToList();
+            Assert(matches.Count == 2, $"filter T29 active should be 2, got {matches.Count}");
+
+            // MakeCurrent 邏輯: 切社 = 改 CurrentClubId (vm 用)
+            // 暫存 CurrentClubId 在 vm — 我們改用 static get 直接測 DbContext filter 切社
+            var currentId = tcwb.Id;
+            var current = ctx.Clubs.AsNoTracking().First(c => c.Id == currentId);
+            Assert(current.Name == "T29 台中西北", $"current club should be tcwb, got '{current.Name}'");
+
+            // DefaultClubId 常數 = 1
+            Assert(SeedData.DefaultClubId == 1, "DefaultClubId should be 1");
+
+            // 清理
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
         });
     }

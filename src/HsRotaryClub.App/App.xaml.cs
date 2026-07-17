@@ -33,6 +33,7 @@ public partial class App : Application
         services.AddTransient<MainWindow>(sp => new MainWindow(sp.GetRequiredService<MainWindowViewModel>()));
 
         services.AddTransient<HomeViewModel>();
+        services.AddTransient<ClubManagementViewModel>();
         services.AddTransient<MemberViewModel>();
         services.AddTransient<ClubCollectionViewModel>();
         services.AddTransient<FriendlyClubViewModel>();
