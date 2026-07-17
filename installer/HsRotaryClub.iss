@@ -38,8 +38,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 BeveledLabel=????潸號??????
 [Files]
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+Name: "{group}\HsRotaryClub"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\Uninstall HsRotaryClub"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
