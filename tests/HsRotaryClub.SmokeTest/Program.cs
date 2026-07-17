@@ -37,6 +37,7 @@ internal static class Program
         await T24_InstallerIcoExists();
         await T25_LanguageCodePageZh();
         await T26_AppIconCsprojRef();
+        await T27_MainWindowSize();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -801,6 +802,35 @@ internal static class Program
             var relPath = iconMatch.Groups[1].Value;
             var fullPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(csproj)!, relPath));
             Assert(File.Exists(fullPath), $"icon file missing: {fullPath}");
+        });
+    }
+
+    private static async Task T27_MainWindowSize()
+    {
+        await Run("T27 MainWindow 預設尺寸夠大 (>=1280x720) + Maximized", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var xaml = Path.Combine(projectRoot, "src", "HsRotaryClub.App", "Views", "MainWindow.xaml");
+            var content = File.ReadAllText(xaml);
+
+            // Width >= 1280
+            var wMatch = System.Text.RegularExpressions.Regex.Match(content, @"Width=""(\d+)""");
+            Assert(wMatch.Success, "Width not found");
+            var w = int.Parse(wMatch.Groups[1].Value);
+            Assert(w >= 1280, $"MainWindow Width={w}, expected >= 1280");
+
+            // Height >= 720
+            var hMatch = System.Text.RegularExpressions.Regex.Match(content, @"Height=""(\d+)""");
+            Assert(hMatch.Success, "Height not found");
+            var h = int.Parse(hMatch.Groups[1].Value);
+            Assert(h >= 720, $"MainWindow Height={h}, expected >= 720");
+
+            // MinWidth for small monitors fallback
+            Assert(content.Contains("MinWidth=\"1280\""), "MinWidth=1280 missing");
+            Assert(content.Contains("MinHeight=\"720\""), "MinHeight=720 missing");
+
+            // WindowState=Maximized
+            Assert(content.Contains("WindowState=\"Maximized\""), "WindowState=Maximized missing");
         });
     }
 
