@@ -43,6 +43,8 @@ internal static class Program
         await T30_MemberClubIdFilter();
         await T31_MemberCrossClubQuery();
         await T32_ClubPickerLogic();
+        await T33_DataTransferExport();
+        await T34_DataTransferRoundTrip();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1100,6 +1102,122 @@ internal static class Program
             // 清理
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T33_DataTransferExport()
+    {
+        await Run("T33 DataTransferEngine.ExportToJson: dump Club + Members + Collections", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // seed
+            var fysw = new Club { Name = "T33 豐原西南", District = "3460", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            ctx.Members.AddRange(
+                new Member { Code = 101, Name = "張小明", ClubId = fysw.Id, IsCurrent = true, Mobile = "0912-111-111" },
+                new Member { Code = 102, Name = "李大華", ClubId = fysw.Id, IsCurrent = true });
+            ctx.ClubCollections.Add(new ClubCollection
+            {
+                ClubId = fysw.Id, Year = 2026, Month = 7,
+                CollectionDate = new DateOnly(2026, 7, 5),
+                Category = "會費", MemberCode = 101, MemberName = "張小明",
+                CashAmount = 1500m,
+            });
+            ctx.SaveChanges();
+
+            // Export
+            var json = DataTransferEngine.ExportToJson(ctx, clubId: fysw.Id);
+            Assert(json.Length > 100, $"json too short: {json.Length}");
+
+            // 解析回來檢查 (避免 PS cp950 decode 中文失敗 — parse JSON)
+            using var ctx2 = NewCtx(out _);
+            var import = DataTransferEngine.ImportFromJson(ctx2, json, skipExisting: true);
+            Assert(import.ClubsInserted >= 1, $"import should insert >=1 club, got {import.ClubsInserted}");
+            Assert(import.MembersInserted >= 2, $"import should insert >=2 members, got {import.MembersInserted}");
+            Assert(import.CollectionsInserted >= 1, $"import should insert >=1 collection, got {import.CollectionsInserted}");
+            Assert(import.Summary.Contains("成功"), $"summary should say 成功, got '{import.Summary}'");
+
+            // 確認金額 round-trip — 用 byte 比 (cp950 safe)
+            var bytes = System.Text.Encoding.UTF8.GetBytes(json);
+            var jsonText = System.Text.Encoding.UTF8.GetString(bytes);
+            // 用 index 找字串,不用 string.Contains
+            var idxName = jsonText.IndexOf("\u8c50\u539f\u897f\u5357", StringComparison.Ordinal);
+            Assert(idxName >= 0, "club name '豐原西南' should be in JSON UTF-8 bytes");
+            var idxAmount = jsonText.IndexOf("1500", StringComparison.Ordinal);
+            Assert(idxAmount >= 0, "amount 1500 should be in JSON UTF-8 bytes");
+
+            // 清理
+            foreach (var c in ctx2.ClubCollections.ToList()) ctx2.ClubCollections.Remove(c);
+            foreach (var m in ctx2.Members.ToList()) ctx2.Members.Remove(m);
+            foreach (var c in ctx2.Clubs.ToList()) ctx2.Clubs.Remove(c);
+            ctx2.SaveChanges();
+            foreach (var c in ctx.ClubCollections.ToList()) ctx.ClubCollections.Remove(c);
+            foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T34_DataTransferRoundTrip()
+    {
+        await Run("T34 DataTransferEngine round-trip: A 機 export → B 機 import", () =>
+        {
+            // A 機: 1 club + 2 members + 1 collection + 1 friendly + 1 donation
+            var dbA = NewCtx(out _);
+            var fysw = new Club { Name = "T34 豐原西南", IsActive = true };
+            dbA.Clubs.Add(fysw);
+            dbA.SaveChanges();
+            dbA.Members.Add(new Member { Code = 201, Name = "王小明", ClubId = fysw.Id, IsCurrent = true });
+            dbA.ClubCollections.Add(new ClubCollection
+            {
+                ClubId = fysw.Id, Year = 2026, Month = 8,
+                CollectionDate = new DateOnly(2026, 8, 5),
+                Category = "會費", MemberCode = 201, MemberName = "王小明",
+                CashAmount = 1500m,
+            });
+            dbA.FriendlyClubs.Add(new FriendlyClub
+            {
+                ClubId = fysw.Id, ClubCode = "FC999", ClubName = "T34 測試友社",
+            });
+            dbA.SaveChanges();
+            var fcId = dbA.FriendlyClubs.First().Id;
+            dbA.ClubDonations.Add(new ClubDonation
+            {
+                FriendlyClubId = fcId, FriendlyClubName = "T34 測試友社",
+                Direction = DonationDirection.In, Amount = 1000m, Purpose = "贊助",
+                TxDate = new DateOnly(2026, 8, 5),
+            });
+            dbA.SaveChanges();
+
+            // Export from A
+            var json = DataTransferEngine.ExportToJson(dbA, clubId: fysw.Id);
+            dbA.Dispose();
+
+            // B 機: 空 db,import
+            var dbB = NewCtx(out _);
+            var result = DataTransferEngine.ImportFromJson(dbB, json, skipExisting: true);
+            Assert(result.ClubsInserted == 1, $"B should insert 1 club, got {result.ClubsInserted}");
+            Assert(result.MembersInserted == 1, $"B should insert 1 member, got {result.MembersInserted}");
+            Assert(result.CollectionsInserted == 1, $"B should insert 1 collection, got {result.CollectionsInserted}");
+            Assert(result.FriendlyClubsInserted == 1, $"B should insert 1 friendly, got {result.FriendlyClubsInserted}");
+            Assert(result.DonationsInserted == 1, $"B should insert 1 donation, got {result.DonationsInserted}");
+
+            // 第二次 import 應該 skip (因為資料已存在)
+            var result2 = DataTransferEngine.ImportFromJson(dbB, json, skipExisting: true);
+            Assert(result2.ClubsInserted == 0, $"second import should skip club, got {result2.ClubsInserted}");
+            Assert(result2.MembersInserted == 0, $"second import should skip member, got {result2.MembersInserted}");
+
+            // 清理
+            foreach (var d in dbB.ClubDonations.ToList()) dbB.ClubDonations.Remove(d);
+            foreach (var f in dbB.FriendlyClubs.ToList()) dbB.FriendlyClubs.Remove(f);
+            foreach (var c in dbB.ClubCollections.ToList()) dbB.ClubCollections.Remove(c);
+            foreach (var m in dbB.Members.ToList()) dbB.Members.Remove(m);
+            foreach (var c in dbB.Clubs.ToList()) dbB.Clubs.Remove(c);
+            dbB.SaveChanges();
+            dbB.Dispose();
         });
     }
 
