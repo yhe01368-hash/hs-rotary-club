@@ -774,12 +774,15 @@ internal static class Program
             Assert(content.Contains("LanguageCodePage=950"),
                 ".iss missing LanguageCodePage=950 (Big5 codepage for zh-TW)");
 
-            // BeveledLabel 應為 ASCII (避免 codepage garbled)
-            var bevelMatch = System.Text.RegularExpressions.Regex.Match(content, @"BeveledLabel=(.+?)\r?\n");
-            Assert(bevelMatch.Success, "BeveledLabel missing");
-            var bevel = bevelMatch.Groups[1].Value.Trim();
-            var isAscii = bevel.All(c => c < 0x80);
-            Assert(isAscii, $"BeveledLabel should be ASCII, got '{bevel}'");
+            // AppName 應為 ASCII (避免 codepage garbled) — AppName 在 [Setup] section
+            var appNameMatch = System.Text.RegularExpressions.Regex.Match(content, @"^AppName=(.+?)$", System.Text.RegularExpressions.RegexOptions.Multiline);
+            Assert(appNameMatch.Success, "AppName missing");
+            var appName = appNameMatch.Groups[1].Value.Trim();
+            Assert(appName.All(c => c < 0x80), $"AppName should be ASCII, got '{appName}'");
+
+            // 至少有一條中文的 [Messages] entry (WelcomeLabel2 / FinishedLabel etc.)
+            var msgCn = System.Text.RegularExpressions.Regex.IsMatch(content, @"\[\s*Messages\s*\][\s\S]*?[\u4e00-\u9fff]");
+            Assert(msgCn, "no Chinese in [Messages] section — user will see English wizard text");
         });
     }
 
