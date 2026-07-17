@@ -50,7 +50,14 @@ Uninstallable=yes
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Languages]
-Name: "traditionalchinese"; MessagesFile: "compiler:Languages\Chinese (Traditional).isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
+; Inno 6.x 沒有內建 Chinese (Traditional).isl — fallback Default + [Messages] 自訂中文
+
+[Messages]
+; 自訂中文安裝字串
+BeveledLabel=豐原西南扶輪社
+SetupWindowTitle=安裝 豐原西南扶輪社社務行政系統
+WelcomeLabel2=本安裝程式會安裝 [name/ver] 到您的電腦。%n%nRotary Club 社務行政系統 v0.6%nn請按「下一步」繼續。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checked
