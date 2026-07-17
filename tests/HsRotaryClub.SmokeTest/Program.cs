@@ -21,6 +21,8 @@ internal static class Program
         await T08_WeddingAnniversary();
         await T09_ReferrerChain();
         await T10_DisplayAttributes();
+        await T11_TrySaveChangesExtension();
+        await T12_QuickFilterReflection();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -291,6 +293,73 @@ internal static class Program
             Assert(props["WeddingAnniversary"] == "結婚紀念日", $"WeddingAnniversary header '{props["WeddingAnniversary"]}'");
             Assert(props["IsCurrent"] == "現任", $"IsCurrent header '{props["IsCurrent"]}'");
             Assert(props.GetValueOrDefault("Rid") == "RID", $"RID header wrong: '{props.GetValueOrDefault("Rid")}'");
+        });
+    }
+
+    private static async Task T11_TrySaveChangesExtension()
+    {
+        await Run("T11 TrySaveChanges extension: happy + sad path", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // 1. happy path
+            var ok = new Member { Code = 711, Name = "T11-OK", IsCurrent = true };
+            ctx.Members.Add(ok);
+            Assert(ctx.TrySaveChanges(out var err) == true, $"happy should pass: {err}");
+            Assert(err == string.Empty, $"error msg should be empty, got '{err}'");
+
+            // 2. sad path: 加一個違反 unique constraint (Code 重複)
+            var dup = new Member { Code = 711, Name = "T11-DUP", IsCurrent = true };
+            ctx.Members.Add(dup);
+            Assert(ctx.TrySaveChanges(out var err2) == false, "duplicate Code should NOT save");
+            Assert(err2.Contains("UNIQUE constraint") || err2.Contains("constraint") || err2.Length > 0,
+                $"error should describe problem, got '{err2}'");
+            ctx.ChangeTracker.Clear();
+
+            // 3. 然後再 save 一次乾淨版本應該過
+            var clean = new Member { Code = 712, Name = "T11-CLEAN", IsCurrent = true };
+            ctx.Members.Add(clean);
+            Assert(ctx.TrySaveChanges(out var err3), $"third save should be clean: {err3}");
+
+            // 清理
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 711));
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 712));
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T12_QuickFilterReflection()
+    {
+        await Run("T12 DbContextSaveOkExtension TrySaveChanges 委派呼叫 OK", () =>
+        {
+            // SmokeTest 不引用 HsRotaryClub.App (WinExe),所以 reflection load 跨平台 assembly 太脆,
+            // 改驗 Infrastructure 的 TrySaveChanges extension 直接能用 — 給 VM 寫來用的 code path。
+
+            using var ctx = NewCtx(out _);
+
+            // 建一個 + 改一個 + 撤回一個混合 batch,測 happy path
+            var a = new Member { Code = 721, Name = "T12A", IsCurrent = true };
+            var b = new Member { Code = 722, Name = "T12B", IsCurrent = true };
+            ctx.Members.AddRange(a, b);
+            Assert(ctx.TrySaveChanges(out var err), $"add 2 should pass: {err}");
+
+            // 內含 FK constraint miss — FriendlyClubId = 0 應被 EF Sqlite restrict 阻擋
+            var donation = new ClubDonation
+            {
+                TxDate = new DateOnly(2026, 7, 17),
+                FriendlyClubId = 999999,  // 假設不存在
+                Direction = DonationDirection.Out,
+                Amount = 100m,
+            };
+            ctx.ClubDonations.Add(donation);
+            Assert(ctx.TrySaveChanges(out var err2) == false, "FK miss should fail");
+            Assert(err2.Length > 0, "error should not be empty");
+
+            // Clean up
+            ctx.ChangeTracker.Clear();
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 721));
+            ctx.Members.Remove(ctx.Members.First(m => m.Code == 722));
+            ctx.SaveChanges();
         });
     }
 

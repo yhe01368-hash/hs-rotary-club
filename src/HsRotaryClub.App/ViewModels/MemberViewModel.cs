@@ -83,7 +83,7 @@ public partial class MemberViewModel : ObservableObject
         }
         _db.Entry(attached).CurrentValues.SetValues(Selected);
         Validate(attached);
-        if (!_db.SaveChangesOk(out var error))
+        if (!_db.TrySaveChanges(out var error))
         {
             StatusMessage = $"儲存失敗: {error}";
             return;
@@ -138,23 +138,5 @@ public partial class MemberViewModel : ObservableObject
         var results = new List<ValidationResult>();
         Validator.TryValidateObject(m, ctx, results, validateAllProperties: true);
         return results.Select(r => r.ErrorMessage ?? "驗證失敗");
-    }
-}
-
-internal static class DbContextExt
-{
-    public static bool SaveChangesOk(this Microsoft.EntityFrameworkCore.DbContext db, out string error)
-    {
-        try
-        {
-            db.SaveChanges();
-            error = "";
-            return true;
-        }
-        catch (DbUpdateException ex)
-        {
-            error = $"{ex.Message} :: {ex.InnerException?.Message}";
-            return false;
-        }
     }
 }
