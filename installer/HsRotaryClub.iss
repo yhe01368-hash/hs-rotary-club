@@ -61,7 +61,7 @@ WelcomeLabel2=本安裝程式會安裝 [name/ver] 到您的電腦。%n%nRotary C
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: checked
-Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "quicklaunchicon"; Description: "{cm:CreateQuickLaunchIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: disableenabledyesno
 
 [Files]
 ; 主要 exe (從 publish/ 拿)
