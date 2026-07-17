@@ -1,9 +1,9 @@
-﻿; ============================================================
-; ????潸號?????瑟???謕??頛駁?????Inno Setup installer script
+; ============================================================
+; ??????????????????????????????Inno Setup installer script
 ; v0.6.0 ??framework-dependent, win-x64
 ; Output: HsRotaryClubSetup-v0.6.exe
 ; ============================================================
-#define MyAppName "????潸號?????瑟???謕??頛駁???
+#define MyAppName "????????????????????????????
 #define MyAppShortName "HsRotaryClub"
 #define MyAppVersion "0.6.0"
 #define MyAppPublisher "Chia Chang"
@@ -26,8 +26,6 @@ OutputDir={#OutputBaseDir}
 OutputBaseFilename=HsRotaryClubSetup-v{#MyAppVersion}
 Compression=lzma2/ultra
 SolidCompression=yes
-PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
 Uninstallable=yes
 UninstallDisplayIcon={app}\HsRotaryClub.App.exe
 
@@ -35,7 +33,7 @@ UninstallDisplayIcon={app}\HsRotaryClub.App.exe
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
-BeveledLabel=????潸號??????
+BeveledLabel=????????????????
 [Files]
 [Icons]
 Name: "{group}\HsRotaryClub"; Filename: "{app}\{#MyAppExeName}"
@@ -45,7 +43,5 @@ Name: "{group}\Uninstall HsRotaryClub"; Filename: "{uninstallexe}"
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\HsRotaryClub"
-
 [Files]
 Source: "{#PublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
