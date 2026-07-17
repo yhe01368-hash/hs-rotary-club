@@ -42,6 +42,7 @@ internal static class Program
         await T29_ClubManagementViewModel();
         await T30_MemberClubIdFilter();
         await T31_MemberCrossClubQuery();
+        await T32_ClubPickerLogic();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1060,6 +1061,43 @@ internal static class Program
 
             // 清理
             foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T32_ClubPickerLogic()
+    {
+        await Run("T32 ClubPicker 啟動邏輯: 多社時跳 picker;只有 default 直接跳過", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // 情境 A: 只有 default 社 → 不跳 picker (直接用 default)
+            ctx.Clubs.Add(new Club { Name = "T32 豐原西南", IsActive = true });
+            ctx.SaveChanges();
+            var activeCount = ctx.Clubs.AsNoTracking().Count(c => c.IsActive);
+            Assert(activeCount == 1, $"case A activeCount should be 1, got {activeCount}");
+
+            // 情境 B: 加第二社 → activeCount = 2 → 跳 picker
+            ctx.Clubs.Add(new Club { Name = "T32 台中西北", IsActive = true });
+            ctx.SaveChanges();
+            activeCount = ctx.Clubs.AsNoTracking().Count(c => c.IsActive);
+            Assert(activeCount == 2, $"case B activeCount should be 2, got {activeCount}");
+
+            // 情境 C: 軟刪第二社 → activeCount = 1 → 不跳 picker
+            var tcwb = ctx.Clubs.First(c => c.Name == "T32 台中西北");
+            tcwb.IsActive = false;
+            ctx.SaveChanges();
+            activeCount = ctx.Clubs.AsNoTracking().Count(c => c.IsActive);
+            Assert(activeCount == 1, $"case C activeCount should be 1, got {activeCount}");
+
+            // 情境 D: 重新啟用 → activeCount = 2 → 跳 picker
+            tcwb.IsActive = true;
+            ctx.SaveChanges();
+            activeCount = ctx.Clubs.AsNoTracking().Count(c => c.IsActive);
+            Assert(activeCount == 2, $"case D activeCount should be 2, got {activeCount}");
+
+            // 清理
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
         });

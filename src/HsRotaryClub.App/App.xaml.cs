@@ -1,4 +1,5 @@
 using System.Windows;
+using HsRotaryClub.App.Controls;
 using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.App.ViewModels;
 using HsRotaryClub.App.Views;
@@ -41,10 +42,27 @@ public partial class App : Application
 
         Services = services.BuildServiceProvider();
 
-        // 蝣箔? schema 撱箇? + seed
+        // 確保 schema 建好 + seed
         using (var scope = Services.CreateScope())
         {
             scope.ServiceProvider.GetRequiredService<DbInitializer>().Initialize();
+        }
+
+        // v0.7 A4 — 啟動時選社 (Db 裡有 2+ 個 active club 才拉 picker,只有 default 一個直接跳過)
+        var currentClubCtx = Services.GetRequiredService<CurrentClubContext>();
+        using (var initScope = Services.CreateScope())
+        {
+            var initDb = initScope.ServiceProvider.GetRequiredService<RotaryDbContext>();
+            var clubCount = initDb.Clubs.Count(c => c.IsActive);
+            if (clubCount >= 2)
+            {
+                var picked = ClubPickerDialog.Pick(initDb);
+                if (picked is not null)
+                {
+                    currentClubCtx.SetCurrent(picked.Id, picked.Name);
+                }
+                // 取消就用 default (1)
+            }
         }
 
         var main = Services.GetRequiredService<MainWindow>();
