@@ -1,9 +1,9 @@
-; ============================================================
-; 鞊?镼踹??嗉憚蝷曄冗???輻頂蝯???Inno Setup installer script
+﻿; ============================================================
+; ????潸號?????瑟???謕??頛駁?????Inno Setup installer script
 ; v0.6.0 ??framework-dependent, win-x64
 ; Output: HsRotaryClubSetup-v0.6.exe
 ; ============================================================
-#define MyAppName "鞊?镼踹??嗉憚蝷曄冗???輻頂蝯?
+#define MyAppName "????潸號?????瑟???謕??頛駁???
 #define MyAppShortName "HsRotaryClub"
 #define MyAppVersion "0.6.0"
 #define MyAppPublisher "Chia Chang"
@@ -14,13 +14,13 @@
 
 [Setup]
 AppId={{B6F3E9A4-1C2D-4F88-9A11-7E2C9B5A0606}}
-AppName={#MyAppName}
+AppName=HsRotaryClub {#MyAppVersion}
 AppVersion={#MyAppVersion}
-AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName=HsRotaryClub {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppUrl}
 DefaultDirName={autopf}\{#MyAppShortName}
-DefaultGroupName={#MyAppName}
+DefaultGroupName=HsRotaryClub
 DisableProgramGroupPage=yes
 OutputDir={#OutputBaseDir}
 OutputBaseFilename=HsRotaryClubSetup-v{#MyAppVersion}
@@ -29,13 +29,13 @@ SolidCompression=yes
 PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 Uninstallable=yes
-UninstallDisplayIcon={app}\{#MyAppExeName}
+UninstallDisplayIcon={app}\HsRotaryClub.App.exe
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Messages]
-BeveledLabel=鞊?镼踹??嗉憚蝷?
+BeveledLabel=????潸號??????
 [Files]
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
