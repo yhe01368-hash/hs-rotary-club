@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using HsRotaryClub.App.Views;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -61,6 +62,11 @@ public partial class FriendlyClubLookupDialog : Window
     public static FriendlyClub? Ask(Window? owner = null)
     {
         var dlg = new FriendlyClubLookupDialog();
+        if (owner is null)
+        {
+            owner = App.Services?.GetService(typeof(MainWindow)) as Window
+                    ?? Application.Current?.MainWindow;
+        }
         if (owner is not null) dlg.Owner = owner;
         return dlg.ShowDialog() == true ? dlg.SelectedClub : null;
     }

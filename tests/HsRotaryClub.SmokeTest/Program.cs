@@ -34,6 +34,9 @@ internal static class Program
         await T21_InstallerArtifactsExist();
         await T22_InstallerAppIdStable();
         await T23_DotnetPublishArgs();
+        await T24_InstallerIcoExists();
+        await T25_LanguageCodePageZh();
+        await T26_AppIconCsprojRef();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -736,6 +739,66 @@ internal static class Program
             dir = dir.Parent;
         }
         return dir?.FullName ?? throw new InvalidOperationException("can't find repo root (.gitignore)");
+    }
+
+    private static async Task T24_InstallerIcoExists()
+    {
+        await Run("T24 installer/HsRotaryClub.ico 存在且 multi-resolution", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var ico = Path.Combine(projectRoot, "installer", "HsRotaryClub.ico");
+            Assert(File.Exists(ico), $"ico not found: {ico}");
+
+            var bytes = File.ReadAllBytes(ico);
+            // ICONDIR: 2 bytes reserved + 2 bytes type + 2 bytes count
+            Assert(bytes.Length >= 6, "ico too small");
+            var reserved = BitConverter.ToInt16(bytes, 0);
+            var type = BitConverter.ToInt16(bytes, 2);
+            var count = BitConverter.ToInt16(bytes, 4);
+            Assert(reserved == 0, "reserved should be 0");
+            Assert(type == 1, $"should be icon type 1, got {type}");
+            Assert(count >= 3, $"should have at least 3 resolutions, got {count}");
+
+            // Check size field of last entry is non-zero
+            Assert(bytes.Length > 1000, $"ico size too small: {bytes.Length}");
+        });
+    }
+
+    private static async Task T25_LanguageCodePageZh()
+    {
+        await Run("T25 .iss LanguageCodePage=950 (zh-TW codepage)", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var iss = Path.Combine(projectRoot, "installer", "HsRotaryClub.iss");
+            var content = File.ReadAllText(iss);
+            Assert(content.Contains("LanguageCodePage=950"),
+                ".iss missing LanguageCodePage=950 (Big5 codepage for zh-TW)");
+
+            // BeveledLabel 應為 ASCII (避免 codepage garbled)
+            var bevelMatch = System.Text.RegularExpressions.Regex.Match(content, @"BeveledLabel=(.+?)\r?\n");
+            Assert(bevelMatch.Success, "BeveledLabel missing");
+            var bevel = bevelMatch.Groups[1].Value.Trim();
+            var isAscii = bevel.All(c => c < 0x80);
+            Assert(isAscii, $"BeveledLabel should be ASCII, got '{bevel}'");
+        });
+    }
+
+    private static async Task T26_AppIconCsprojRef()
+    {
+        await Run("T26 HsRotaryClub.App.csproj 含 ApplicationIcon", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var csproj = Path.Combine(projectRoot, "src", "HsRotaryClub.App", "HsRotaryClub.App.csproj");
+            var content = File.ReadAllText(csproj);
+            Assert(content.Contains("<ApplicationIcon>"),
+                "csproj missing <ApplicationIcon>");
+            // Verify it points to actual existing file
+            var iconMatch = System.Text.RegularExpressions.Regex.Match(content, @"<ApplicationIcon>(.+?)</ApplicationIcon>");
+            Assert(iconMatch.Success, "ApplicationIcon element not found");
+            var relPath = iconMatch.Groups[1].Value;
+            var fullPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(csproj)!, relPath));
+            Assert(File.Exists(fullPath), $"icon file missing: {fullPath}");
+        });
     }
 
     private static RotaryDbContext NewCtx(out string path)

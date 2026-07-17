@@ -26,14 +26,18 @@ OutputDir={#OutputBaseDir}
 OutputBaseFilename=HsRotaryClubSetup-v{#MyAppVersion}
 Compression=lzma2/ultra
 SolidCompression=yes
+SetupIconFile=HsRotaryClub.ico
 Uninstallable=yes
 UninstallDisplayIcon={app}\HsRotaryClub.App.exe
 
-[Languages]
-Name: "english"; MessagesFile: "compiler:Default.isl"
+[LangOptions]
+LanguageID=1028
+LanguageCodePage=950
+
+
 
 [Messages]
-BeveledLabel=????????????????
+BeveledLabel=HsRotaryClub v0.6
 [Files]
 [Icons]
 Name: "{group}\HsRotaryClub"; Filename: "{app}\{#MyAppExeName}"

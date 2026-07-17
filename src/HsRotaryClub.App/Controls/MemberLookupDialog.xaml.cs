@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
+using HsRotaryClub.App.Views;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -63,6 +64,12 @@ public partial class MemberLookupDialog : Window
     public static Member? Ask(Window? owner = null)
     {
         var dlg = new MemberLookupDialog();
+        // Try DI's MainWindow first, fallback to Application.Current.MainWindow
+        if (owner is null)
+        {
+            owner = App.Services?.GetService(typeof(MainWindow)) as Window
+                    ?? Application.Current?.MainWindow;
+        }
         if (owner is not null) dlg.Owner = owner;
         return dlg.ShowDialog() == true ? dlg.SelectedMember : null;
     }
