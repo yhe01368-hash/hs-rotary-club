@@ -9,7 +9,7 @@
 #define MyAppPublisher "Chia Chang"
 #define MyAppUrl "https://github.com/yhe01368-hash/hs-rotary-club"
 #define MyAppExeName "HsRotaryClub.App.exe"
-#define PublishDir "..\src\HsRotaryClub.App\bin\Release\net8.0-windows\win-x64\publish"
+#define PublishDir "..\src\HsRotaryClub.App/bin/Release/net8.0-windows/win-x64/publish"
 #define OutputBaseDir "bin"
 
 [Setup]
@@ -45,3 +45,6 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 [UninstallDelete]
 [Files]
 Source: "{#PublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\e_sqlite3.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PublishDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
+Source: "{#PublishDir}\*.json"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist

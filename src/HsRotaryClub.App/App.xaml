@@ -4,7 +4,7 @@
              xmlns:local="clr-namespace:HsRotaryClub.App"
              xmlns:vm="clr-namespace:HsRotaryClub.App.ViewModels"
              xmlns:views="clr-namespace:HsRotaryClub.App.Views"
-             StartupUri="Views/MainWindow.xaml">
+             >
     <Application.Resources>
         <ResourceDictionary>
             <DataTemplate DataType="{x:Type vm:MemberViewModel}">

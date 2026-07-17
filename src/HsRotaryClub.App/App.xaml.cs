@@ -30,7 +30,7 @@ public partial class App : Application
         services.AddSingleton<DbInitializer>();
 
         services.AddTransient<MainWindowViewModel>();
-        services.AddTransient<MainWindow>();
+        services.AddTransient<MainWindow>(sp => new MainWindow(sp.GetRequiredService<MainWindowViewModel>()));
 
         services.AddTransient<HomeViewModel>();
         services.AddTransient<MemberViewModel>();
@@ -39,7 +39,7 @@ public partial class App : Application
 
         Services = services.BuildServiceProvider();
 
-        // 確保 schema 建立 + seed
+        // 蝣箔? schema 撱箇? + seed
         using (var scope = Services.CreateScope())
         {
             scope.ServiceProvider.GetRequiredService<DbInitializer>().Initialize();

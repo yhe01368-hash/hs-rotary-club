@@ -8,12 +8,13 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Authors>Chia Chang</Authors>
     <Company>HsRotaryClub</Company>
-    <Description>扶輪社社務行政系統 — Infrastructure (EF Core + SQLite)</Description>
+    <Description>?嗉憚蝷曄冗???輻頂蝯???Infrastructure (EF Core + SQLite)</Description>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.10" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.10" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.10">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
