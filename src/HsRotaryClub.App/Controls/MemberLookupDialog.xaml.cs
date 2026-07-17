@@ -60,7 +60,6 @@ public partial class MemberLookupDialog : Window
         if (SelectedMember is not null) DialogResult = true;
     }
 
-    /// <summary>Static helper:彈出 + 回社員(null=取消)。</summary>
     public static Member? Ask(Window? owner = null)
     {
         var dlg = new MemberLookupDialog();

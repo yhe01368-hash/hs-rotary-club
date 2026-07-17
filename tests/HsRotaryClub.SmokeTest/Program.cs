@@ -27,6 +27,10 @@ internal static class Program
         await T14_MultiCollectionSameMember();
         await T15_YearMonthFiltering();
         await T16_RecomputeSpec();
+        await T17_FriendlyClubUniqueCode();
+        await T18_ClubDonationInOutSum();
+        await T19_FriendlyClubSoftDelete();
+        await T20_DonationDisplayAttributes();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -512,6 +516,147 @@ internal static class Program
             ctx.MonthlyReceivableSpecs.Remove(reload);
             ctx.Members.Remove(ctx.Members.First(m => m.Code == 760));
             ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T17_FriendlyClubUniqueCode()
+    {
+        await Run("T17 FriendlyClub.ClubCode Unique 約束", () =>
+        {
+            using var ctx = NewCtx(out _);
+            ctx.FriendlyClubs.Add(new FriendlyClub { ClubCode = "T17-A", ClubName = "社 A" });
+            ctx.SaveChanges();
+
+            // 違反 unique constraint 應該被 Sqlite 擋
+            ctx.FriendlyClubs.Add(new FriendlyClub { ClubCode = "T17-A", ClubName = "社 A 重" });
+            Assert(ctx.TrySaveChanges(out var err) == false, "duplicate ClubCode should fail");
+            Assert(err.Contains("UNIQUE constraint") || err.Contains("constraint") || err.Length > 0,
+                $"error msg expected, got '{err}'");
+            ctx.ChangeTracker.Clear();
+
+            // 改成不同 code
+            ctx.FriendlyClubs.Add(new FriendlyClub { ClubCode = "T17-B", ClubName = "社 B" });
+            Assert(ctx.TrySaveChanges(out var err2), $"different code should pass: {err2}");
+
+            var rows = ctx.FriendlyClubs.Where(c => c.ClubCode.StartsWith("T17-")).ToList();
+            Assert(rows.Count == 2, $"expected 2 rows, got {rows.Count}");
+
+            // Cleanup
+            foreach (var c in rows)
+            {
+                ctx.FriendlyClubs.Remove(c);
+            }
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T18_ClubDonationInOutSum()
+    {
+        await Run("T18 ClubDonation 收入支出彙總 + FriendlyClubName 反查", () =>
+        {
+            using var ctx = NewCtx(out _);
+            var fc = new FriendlyClub { ClubCode = "T18-X", ClubName = "T18 測試社" };
+            ctx.FriendlyClubs.Add(fc);
+            ctx.SaveChanges();
+
+            ctx.ClubDonations.AddRange(
+                new ClubDonation { TxDate = new(2026, 7, 1),  FriendlyClubId = fc.Id, FriendlyClubName = fc.ClubName, Direction = DonationDirection.Out, Amount = 1500m, Purpose = "付例會" },
+                new ClubDonation { TxDate = new(2026, 7, 3),  FriendlyClubId = fc.Id, FriendlyClubName = fc.ClubName, Direction = DonationDirection.Out, Amount = 500m,  Purpose = "付雜項" },
+                new ClubDonation { TxDate = new(2026, 7, 5),  FriendlyClubId = fc.Id, FriendlyClubName = fc.ClubName, Direction = DonationDirection.In,  Amount = 2000m, Purpose = "收捐款" },
+                new ClubDonation { TxDate = new(2026, 7, 10), FriendlyClubId = fc.Id, FriendlyClubName = fc.ClubName, Direction = DonationDirection.In,  Amount = 800m,  Purpose = "收雜項" });
+            ctx.SaveChanges();
+
+            var all = ctx.ClubDonations.Where(d => d.FriendlyClubId == fc.Id).AsEnumerable();
+            var outTotal = all.Where(d => d.Direction == DonationDirection.Out).Sum(d => d.Amount);
+            var inTotal = all.Where(d => d.Direction == DonationDirection.In).Sum(d => d.Amount);
+            Assert(outTotal == 2000m, $"Out total should be 2000, got {outTotal}");
+            Assert(inTotal == 2800m, $"In total should be 2800, got {inTotal}");
+
+            // FriendlyClubName 反查
+            var sample = all.First();
+            Assert(sample.FriendlyClubName == "T18 測試社", "FriendlyClubName not persisted");
+
+            // 存完再讀 中文 purpose
+            var purpose = ctx.ClubDonations.First(d => d.Purpose == "付雜項");
+            Assert(purpose.Amount == 500m, "中文 Purpose 查不到");
+
+            // Cleanup
+            ctx.ClubDonations.RemoveRange(ctx.ClubDonations.Where(d => d.FriendlyClubId == fc.Id));
+            ctx.FriendlyClubs.Remove(fc);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T19_FriendlyClubSoftDelete()
+    {
+        await Run("T19 FriendlyClub 有捐款 → 軟刪 / 沒捐款 → 硬刪", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // Case 1: 沒捐款 → 硬刪
+            var c1 = new FriendlyClub { ClubCode = "T19-X1", ClubName = "可刪" };
+            ctx.FriendlyClubs.Add(c1);
+            ctx.SaveChanges();
+
+            var id1 = c1.Id;
+            Assert(!ctx.ClubDonations.Any(d => d.FriendlyClubId == id1), "case 1 should have no donations");
+            ctx.FriendlyClubs.Remove(c1);
+            Assert(ctx.TrySaveChanges(out var err1), $"hard delete should pass: {err1}");
+            Assert(ctx.FriendlyClubs.FirstOrDefault(x => x.Id == id1) is null, "case 1 should be hard-deleted");
+
+            // Case 2: 有捐款 → VM 邏輯改 IsActive=false
+            var c2 = new FriendlyClub { ClubCode = "T19-X2", ClubName = "不可刪" };
+            ctx.FriendlyClubs.Add(c2);
+            ctx.SaveChanges();
+            ctx.ClubDonations.Add(new ClubDonation
+            {
+                TxDate = new(2026, 7, 17),
+                FriendlyClubId = c2.Id,
+                FriendlyClubName = c2.ClubName,
+                Direction = DonationDirection.In,
+                Amount = 1000m,
+            });
+            ctx.SaveChanges();
+
+            Assert(ctx.ClubDonations.Any(d => d.FriendlyClubId == c2.Id), "case 2 should have donation");
+            c2.IsActive = false;
+            ctx.SaveChanges();
+            var reloaded = ctx.FriendlyClubs.First(x => x.Id == c2.Id);
+            Assert(reloaded.IsActive == false, "case 2 should be soft-deleted (IsActive=false)");
+
+            // Cleanup
+            ctx.ClubDonations.RemoveRange(ctx.ClubDonations.Where(d => d.FriendlyClubId == c2.Id));
+            ctx.FriendlyClubs.Remove(reloaded);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T20_DonationDisplayAttributes()
+    {
+        await Run("T20 FriendlyClub + ClubDonation [Display(Name=...)] 中文 metadata", () =>
+        {
+            var clubProps = typeof(FriendlyClub).GetProperties()
+                .Where(p => p.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), inherit: true).Any())
+                .ToDictionary(p => p.Name, p => p.GetCustomAttribute<System.ComponentModel.DataAnnotations.DisplayAttribute>()!.GetName() ?? p.Name);
+
+            Assert(clubProps["ClubCode"] == "社團代號", $"ClubCode: '{clubProps["ClubCode"]}'");
+            Assert(clubProps["ClubName"] == "社團名稱", $"ClubName: '{clubProps["ClubName"]}'");
+            Assert(clubProps["Remarks"] == "備註", $"Remarks: '{clubProps["Remarks"]}'");
+            Assert(clubProps["IsActive"] == "啟用", $"IsActive: '{clubProps["IsActive"]}'");
+
+            var donateProps = typeof(ClubDonation).GetProperties()
+                .Where(p => p.GetCustomAttributes(typeof(System.ComponentModel.DataAnnotations.DisplayAttribute), inherit: true).Any())
+                .ToDictionary(p => p.Name, p => p.GetCustomAttribute<System.ComponentModel.DataAnnotations.DisplayAttribute>()!.GetName() ?? p.Name);
+
+            Assert(donateProps["TxDate"] == "日期", $"TxDate: '{donateProps["TxDate"]}'");
+            Assert(donateProps["FriendlyClubId"] == "友社", $"FriendlyClubId: '{donateProps["FriendlyClubId"]}'");
+            Assert(donateProps["Direction"] == "方向", $"Direction: '{donateProps["Direction"]}'");
+            Assert(donateProps["Amount"] == "金額", $"Amount: '{donateProps["Amount"]}'");
+            Assert(donateProps["Purpose"] == "用途", $"Purpose: '{donateProps["Purpose"]}'");
+
+            // Display 不含在 FK 欄位的 FriendlyClubId (or may) — verify 至少 TxDate / Amount / Purpose
+            Assert(donateProps.GetValueOrDefault("FriendlyClubName") == "友社名稱",
+                $"FriendlyClubName: '{donateProps.GetValueOrDefault("FriendlyClubName")}'");
         });
     }
 

@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HsRotaryClub.Domain;
 
 /// <summary>
@@ -8,15 +10,16 @@ public class FriendlyClub
 {
     public int Id { get; set; }
 
-    /// <summary>社團代號</summary>
+    [Display(Name = "社團代號")]
     public string ClubCode { get; set; } = string.Empty;
 
-    /// <summary>社團名稱</summary>
+    [Display(Name = "社團名稱")]
     public string ClubName { get; set; } = string.Empty;
 
+    [Display(Name = "備註")]
     public string? Remarks { get; set; }
 
-    /// <summary>對外捐款 / 收受捐款往來是否啟用</summary>
+    [Display(Name = "啟用")]
     public bool IsActive { get; set; } = true;
 }
 
@@ -28,19 +31,25 @@ public class ClubDonation
 {
     public int Id { get; set; }
 
+    [Display(Name = "日期")]
     public DateOnly TxDate { get; set; }
 
-    /// <summary>FK to FriendlyClub</summary>
+    [Display(Name = "友社")]
     public int FriendlyClubId { get; set; }
 
-    /// <summary>捐款方向:Out = 本社付給友社 / In = 友社付給本社</summary>
+    [Display(Name = "友社名稱")]
+    public string FriendlyClubName { get; set; } = string.Empty;  // 反正規顯示用
+
+    [Display(Name = "方向")]
     public DonationDirection Direction { get; set; }
 
+    [Display(Name = "金額")]
     public decimal Amount { get; set; }
 
-    /// <summary>用途 / 事由 (例:例會紀念、聯合例會、扶輪基金)</summary>
+    [Display(Name = "用途")]
     public string? Purpose { get; set; }
 
+    [Display(Name = "收據編號")]
     public string? ReceiptNo { get; set; }
 }
 
