@@ -3,6 +3,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HsRotaryClub.App.Controls;
+using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace HsRotaryClub.App.ViewModels;
 /// <summary>
 /// M3 友社捐款完整版。
 /// 左速查(社團) + 右表單(社團基本資料) + 下方捐款記錄子表。
+/// v0.7 A5:加 ClubId filter — 只看當前操作社的友社。
 /// </summary>
 public partial class FriendlyClubViewModel : ObservableObject
 {
     private readonly RotaryDbContext _db;
+    private readonly CurrentClubContext _currentClub;
 
     public ObservableCollection<FriendlyClub> Clubs { get; } = new();
     public ObservableCollection<ClubDonation> Donations { get; } = new();
@@ -48,10 +51,12 @@ public partial class FriendlyClubViewModel : ObservableObject
     public decimal OutTotal => Donations.Where(d => d.Direction == DonationDirection.Out).Sum(d => d.Amount);
     public decimal NetTotal => InTotal - OutTotal;
 
-    public FriendlyClubViewModel(RotaryDbContext db)
+    public FriendlyClubViewModel(RotaryDbContext db, CurrentClubContext currentClub)
     {
         _db = db;
+        _currentClub = currentClub;
         Reload();
+        _currentClub.CurrentClubIdChanged += (_, _) => Reload();
     }
 
     partial void OnFilterChanged(string value) => Reload();
@@ -61,6 +66,7 @@ public partial class FriendlyClubViewModel : ObservableObject
     private void Reload()
     {
         var q = _db.FriendlyClubs.AsNoTracking().AsQueryable();
+        q = q.Where(c => c.ClubId == _currentClub.CurrentClubId);  // v0.7 A5
         if (!string.IsNullOrWhiteSpace(Filter))
         {
             q = q.Where(c => c.ClubCode.Contains(Filter) || c.ClubName.Contains(Filter));
@@ -109,7 +115,7 @@ public partial class FriendlyClubViewModel : ObservableObject
                 }
             }
         }
-        var c = new FriendlyClub { ClubCode = next, ClubName = "新友社", IsActive = true };
+        var c = new FriendlyClub { ClubCode = next, ClubName = "新友社", IsActive = true, ClubId = _currentClub.CurrentClubId };  // v0.7 A5
         _db.FriendlyClubs.Add(c);
         if (!_db.TrySaveChanges(out var error))
         {

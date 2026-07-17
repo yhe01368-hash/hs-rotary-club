@@ -41,6 +41,7 @@ internal static class Program
         await T28_ClubEntityCRUD();
         await T29_ClubManagementViewModel();
         await T30_MemberClubIdFilter();
+        await T31_MemberCrossClubQuery();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -996,6 +997,68 @@ internal static class Program
 
             // 清理
             foreach (var c in ctx.ClubCollections.ToList()) ctx.ClubCollections.Remove(c);
+            foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T31_MemberCrossClubQuery()
+    {
+        await Run("T31 CurrentClubContext filter: 模擬 VM query 跨社過濾", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            // 建 3 個社
+            var fysw = new Club { Name = "T31 豐原西南", IsActive = true };
+            var tcwb = new Club { Name = "T31 台中西北", IsActive = true };
+            var feng = new Club { Name = "T31 豐原", IsActive = true };
+            ctx.Clubs.AddRange(fysw, tcwb, feng);
+            ctx.SaveChanges();
+
+            // 每社 2 個社員 (6 個)
+            ctx.Members.AddRange(
+                new Member { Code = 101, Name = "A 員", ClubId = fysw.Id, IsCurrent = true },
+                new Member { Code = 102, Name = "B 員", ClubId = fysw.Id, IsCurrent = true },
+                new Member { Code = 201, Name = "C 員", ClubId = tcwb.Id, IsCurrent = true },
+                new Member { Code = 202, Name = "D 員", ClubId = tcwb.Id, IsCurrent = true },
+                new Member { Code = 301, Name = "E 員", ClubId = feng.Id, IsCurrent = true },
+                new Member { Code = 302, Name = "F 員", ClubId = feng.Id, IsCurrent = true });
+            ctx.SaveChanges();
+
+            // 模擬 CurrentClubContext 切到 fysw.Id
+            int currentClubId = fysw.Id;
+
+            // VM 用的 query pattern
+            var visibleMembers = ctx.Members.AsNoTracking()
+                .Where(m => m.ClubId == currentClubId && m.IsCurrent)
+                .OrderBy(m => m.Code)
+                .ToList();
+
+            Assert(visibleMembers.Count == 2, $"should see 2 in fysw, got {visibleMembers.Count}");
+            Assert(visibleMembers[0].Name == "A 員", "first should be A 員");
+            Assert(visibleMembers[1].Name == "B 員", "second should be B 員");
+
+            // 切到 tcwb
+            currentClubId = tcwb.Id;
+            visibleMembers = ctx.Members.AsNoTracking()
+                .Where(m => m.ClubId == currentClubId && m.IsCurrent)
+                .ToList();
+            Assert(visibleMembers.Count == 2, $"tcwb should have 2, got {visibleMembers.Count}");
+            Assert(visibleMembers.All(m => m.ClubId == tcwb.Id), "all should be tcwb");
+
+            // 切到 feng
+            currentClubId = feng.Id;
+            visibleMembers = ctx.Members.AsNoTracking()
+                .Where(m => m.ClubId == currentClubId && m.IsCurrent)
+                .ToList();
+            Assert(visibleMembers.Count == 2, $"feng should have 2, got {visibleMembers.Count}");
+
+            // 總共 6 個社員在 db,但每個社只看到自己的 2 個
+            var allCount = ctx.Members.Count();
+            Assert(allCount == 6, $"total should be 6, got {allCount}");
+
+            // 清理
             foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();

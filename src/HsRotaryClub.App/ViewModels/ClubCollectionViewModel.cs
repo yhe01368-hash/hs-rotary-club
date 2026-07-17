@@ -3,6 +3,7 @@ using System.IO;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HsRotaryClub.App.Controls;
+using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,6 +13,7 @@ namespace HsRotaryClub.App.ViewModels;
 public partial class ClubCollectionViewModel : ObservableObject
 {
     private readonly RotaryDbContext _db;
+    private readonly CurrentClubContext _currentClub;
 
     public ObservableCollection<ClubCollection> Collections { get; } = new();
     public ObservableCollection<MonthlyReceivableSpec> ReceivableSpecs { get; } = new();
@@ -31,10 +33,12 @@ public partial class ClubCollectionViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "就緒";
 
-    public ClubCollectionViewModel(RotaryDbContext db)
+    public ClubCollectionViewModel(RotaryDbContext db, CurrentClubContext currentClub)
     {
         _db = db;
+        _currentClub = currentClub;
         Reload();
+        _currentClub.CurrentClubIdChanged += (_, _) => Reload();
     }
 
     partial void OnYearChanged(int value) => Reload();
@@ -45,6 +49,7 @@ public partial class ClubCollectionViewModel : ObservableObject
     private void Reload()
     {
         var q = _db.ClubCollections.AsNoTracking().AsQueryable();
+        q = q.Where(c => c.ClubId == _currentClub.CurrentClubId);  // v0.7 A5
         q = q.Where(c => c.Year == Year && c.Month == Month);
         if (!string.IsNullOrWhiteSpace(Filter))
         {
@@ -59,10 +64,10 @@ public partial class ClubCollectionViewModel : ObservableObject
             Collections.Add(c);
         Selected = Collections.FirstOrDefault();
 
-        // 月度應收 (同年月)
+        // 月度應收 (同年月) — v0.7 A5 加 club filter
         var specs = _db.MonthlyReceivableSpecs
             .AsNoTracking()
-            .Where(s => s.Year == Year && s.Month == Month)
+            .Where(s => s.ClubId == _currentClub.CurrentClubId && s.Year == Year && s.Month == Month)
             .OrderBy(s => s.MemberCode)
             .ToList();
         ReceivableSpecs.Clear();
@@ -81,6 +86,7 @@ public partial class ClubCollectionViewModel : ObservableObject
             Category = "會費",
             MemberCode = 0,
             MemberName = "(待選)",
+            ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.ClubCollections.Add(c);
         if (!_db.TrySaveChanges(out var error))

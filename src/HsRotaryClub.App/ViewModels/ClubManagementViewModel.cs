@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -8,13 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace HsRotaryClub.App.ViewModels;
 
 /// <summary>
-/// 社團管理 — v0.7 A3。
+/// 社團管理 — v0.7 A3 + A5。
 /// 對齊舊版畫面 01 「會員資料管理作業」的「社團」面,但這版先純 Club entity CRUD + soft-delete。
-/// v0.7 A2 之後,VM 會加 CurrentClubId filter — 現在所有 Club 一起看。
+/// MakeCurrent 切 CurrentClubContext — 推播給所有 VM 自動 Reload。
 /// </summary>
 public partial class ClubManagementViewModel : ObservableObject
 {
     private readonly RotaryDbContext _db;
+    private readonly CurrentClubContext _currentClubCtx;
 
     public ObservableCollection<Club> Clubs { get; } = new();
 
@@ -37,9 +39,10 @@ public partial class ClubManagementViewModel : ObservableObject
     [ObservableProperty]
     private string _currentClubName = "";
 
-    public ClubManagementViewModel(RotaryDbContext db)
+    public ClubManagementViewModel(RotaryDbContext db, CurrentClubContext currentClubCtx)
     {
         _db = db;
+        _currentClubCtx = currentClubCtx;
         Reload();
     }
 
@@ -58,8 +61,9 @@ public partial class ClubManagementViewModel : ObservableObject
         }
         foreach (var c in q.OrderBy(c => c.Name).ToList())
             Clubs.Add(c);
-        Selected ??= Clubs.FirstOrDefault(c => c.Id == CurrentClubId) ?? Clubs.FirstOrDefault();
-        CurrentClubName = _db.Clubs.FirstOrDefault(c => c.Id == CurrentClubId)?.Name ?? "";
+        Selected ??= Clubs.FirstOrDefault(c => c.Id == _currentClubCtx.CurrentClubId) ?? Clubs.FirstOrDefault();
+        // XAML bind CurrentClubName — 從 _currentClubCtx 拉出
+        CurrentClubName = _currentClubCtx.CurrentClubName;
         StatusMessage = $"載入 {Clubs.Count} 個社團";
     }
 
@@ -115,13 +119,12 @@ public partial class ClubManagementViewModel : ObservableObject
         Reload();
     }
 
-    /// <summary>切換 current club (切到 Selected 為操作社)。</summary>
+    /// <summary>切換 current club (切到 Selected 為操作社) — v0.7 A5 推播給其他 VM。</summary>
     [RelayCommand]
     private void MakeCurrent()
     {
         if (Selected is null) return;
-        CurrentClubId = Selected.Id;
-        CurrentClubName = Selected.Name;
+        _currentClubCtx.SetCurrent(Selected.Id, Selected.Name);
         StatusMessage = $"已切到「{Selected.Name}」為操作社";
     }
 }

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel.DataAnnotations;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
@@ -12,10 +13,12 @@ namespace HsRotaryClub.App.ViewModels;
 /// M1 社員資料維護 — 完整版。
 /// 對應舊版 「社員基本資料維護」畫面 (TS81.mdb)。
 /// 左側速查清單 + 右側編輯表單 + 「現任社員 / 顯示刪除社員」toggle。
+/// v0.7 A5:加 ClubId filter — 由 CurrentClubContext.CurrentClubId 控制。
 /// </summary>
 public partial class MemberViewModel : ObservableObject
 {
     private readonly RotaryDbContext _db;
+    private readonly CurrentClubContext _currentClub;
 
     public ObservableCollection<Member> Members { get; } = new();
 
@@ -32,10 +35,12 @@ public partial class MemberViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "就緒";
 
-    public MemberViewModel(RotaryDbContext db)
+    public MemberViewModel(RotaryDbContext db, CurrentClubContext currentClub)
     {
         _db = db;
+        _currentClub = currentClub;
         Reload();
+        _currentClub.CurrentClubIdChanged += (_, _) => Reload();
     }
 
     partial void OnFilterChanged(string value) => Reload();
@@ -50,6 +55,7 @@ public partial class MemberViewModel : ObservableObject
     {
         Members.Clear();
         var q = _db.Members.AsNoTracking().AsQueryable();
+        q = q.Where(m => m.ClubId == _currentClub.CurrentClubId);  // v0.7 A5: 多社 filter
         q = ShowCurrentOnly ? q.Where(m => m.IsCurrent) : q.Where(m => !m.IsCurrent);
         if (!string.IsNullOrWhiteSpace(Filter))
         {
@@ -96,13 +102,17 @@ public partial class MemberViewModel : ObservableObject
     [RelayCommand]
     private void Add()
     {
-        var nextCode = (_db.Members.Max(m => (int?)m.Code) ?? 0) + 1;
+        // 下一個 code 在「當前社」內編號,不跨社
+        var nextCode = (_db.Members
+            .Where(m => m.ClubId == _currentClub.CurrentClubId)
+            .Max(m => (int?)m.Code) ?? 0) + 1;
         var m = new Member
         {
             Code = nextCode,
             Name = "新社員",
             EnglishName = null,
             IsCurrent = true,
+            ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.Members.Add(m);
         _db.SaveChanges();

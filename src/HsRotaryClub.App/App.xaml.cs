@@ -37,6 +37,7 @@ public partial class App : Application
         services.AddTransient<MemberViewModel>();
         services.AddTransient<ClubCollectionViewModel>();
         services.AddTransient<FriendlyClubViewModel>();
+        services.AddSingleton<CurrentClubContext>();  // v0.7 A5 — 全 app 共用「當前操作社」
 
         Services = services.BuildServiceProvider();
 
