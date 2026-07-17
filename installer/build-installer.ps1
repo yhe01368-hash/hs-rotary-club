@@ -31,7 +31,8 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "ERR: dotnet publish failed (exit $LASTEXITCODE)" -ForegroundColor Red
     exit $LASTEXITCODE
 }
-$publishDir = "..\src\HsRotaryClub.App\bin\publish\win-x64"
+# dotnet publish 預設路徑 bin\Release\<tfm>\<rid>\publish\
+$publishDir = "..\src\HsRotaryClub.App\bin\Release\net8.0-windows\win-x64\publish"
 if (-not (Test-Path -LiteralPath $publishDir)) {
     Write-Host "ERR: publish dir not found: $publishDir" -ForegroundColor Red
     exit 3

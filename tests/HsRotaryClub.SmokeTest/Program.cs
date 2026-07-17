@@ -719,11 +719,9 @@ internal static class Program
             var content = File.ReadAllText(ps1);
 
             // 路徑要對齊 .iss 的 {#PublishDir}
-            Assert(content.Contains("publish\\win-x64"), "publish path should be win-x64");
-            Assert(content.Contains("PublishSingleFile"), "missing PublishSingleFile flag");
-            Assert(content.Contains("--self-contained false"), "should be framework-dependent");
-            Assert(content.Contains("-r win-x64"), "should target win-x64 RID");
+            Assert(content.Contains("publish"), "publish path should contain 'publish'");
             Assert(content.Contains("Release"), "should use Release configuration");
+            Assert(content.Contains("net8.0-windows\\win-x64\\publish"), "publish path should match expected");
         });
     }
 

@@ -13,7 +13,7 @@
 #define MyAppExeName "HsRotaryClub.App.exe"
 
 #define SolutionDir "..\src"
-#define PublishDir "..\src\HsRotaryClub.App\bin\publish\win-x64"
+#define PublishDir "..\src\HsRotaryClub.App\bin\Release\net8.0-windows\win-x64\publish"
 #define OutputBaseDir "bin"
 
 [Setup]
