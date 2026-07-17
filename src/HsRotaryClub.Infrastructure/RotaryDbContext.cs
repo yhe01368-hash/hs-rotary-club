@@ -12,9 +12,23 @@ public class RotaryDbContext : DbContext
     public DbSet<MonthlyReceivableSpec> MonthlyReceivableSpecs => Set<MonthlyReceivableSpec>();
     public DbSet<FriendlyClub> FriendlyClubs => Set<FriendlyClub>();
     public DbSet<ClubDonation> ClubDonations => Set<ClubDonation>();
+    public DbSet<Club> Clubs => Set<Club>();
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
+        mb.Entity<Club>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Name).HasMaxLength(80).IsRequired();
+            e.Property(x => x.District).HasMaxLength(20);
+            e.Property(x => x.Contact).HasMaxLength(50);
+            e.Property(x => x.ContactEmail).HasMaxLength(100);
+            e.Property(x => x.Remarks).HasMaxLength(500);
+            e.Property(x => x.IsActive).HasDefaultValue(true);
+            e.HasIndex(x => x.Name).IsUnique();
+            e.HasIndex(x => x.IsActive);
+        });
+
         mb.Entity<Member>(e =>
         {
             e.HasKey(x => x.Id);

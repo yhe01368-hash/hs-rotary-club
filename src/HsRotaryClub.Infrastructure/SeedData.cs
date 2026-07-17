@@ -4,10 +4,25 @@ namespace HsRotaryClub.Infrastructure;
 
 /// <summary>
 /// 開發/測試用的試算 seed。
-/// 還原舊版畫面看到的 139 吳丞晏等社員, 不裝載真實歷史資料 (v0.2 之後再做 .mdb 遷移工具)。
+/// v0.7 開始每個 demo 資料帶 ClubId FK — 第一個 Club 「豐原西南扶輪社」當預設社。
 /// </summary>
 public static class SeedData
 {
+    public static readonly Club[] DemoClubs =
+    {
+        new()
+        {
+            Name = "豐原西南扶輪社",
+            District = "3460 地區",
+            CharterDate = new(2006, 6, 1),
+            Contact = "秘書處",
+            ContactEmail = "fysw@rotary3460.org",
+            Remarks = "預設 demo 社團 (對應舊版 VB6 系統)",
+            IsActive = true,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        },
+    };
+
     public static readonly Member[] DemoMembers =
     {
         new() { Code = 121, Name = "呂維國", EnglishName = "LU-WEI-KUO",  Birthday = new(1965, 3, 12), IdNumber = "L123456789", Occupation = "營造業", Mobile = "0912-345-678", Email = "lu@example.com", Rid = "10000021", GroupNo = "0401", JoinDate = new(2018, 7, 1) },
@@ -22,9 +37,21 @@ public static class SeedData
         new() { ClubCode = "FC003", ClubName = "大里扶輪社",     Remarks = "聯合例會" },
     };
 
-    /// <summary>如果 Members 表空, 寫入 DemoMembers。</summary>
+    /// <summary>
+    /// 預設社 ID = 1 (豐原西南扶輪社)。所有 demo Member/FriendlyClub/ClubCollection
+    /// 之後在 v0.7 進階 commit 加 ClubId = DefaultClubId 過濾。
+    /// </summary>
+    public const int DefaultClubId = 1;
+
+    /// <summary>如果 Clubs / Members / FriendlyClubs 表空, 寫入 demo。</summary>
     public static void SeedIfEmpty(RotaryDbContext db)
     {
+        if (!db.Clubs.Any())
+        {
+            db.Clubs.AddRange(DemoClubs);
+            db.SaveChanges();
+        }
+
         if (!db.Members.Any())
         {
             db.Members.AddRange(DemoMembers);
@@ -38,3 +65,4 @@ public static class SeedData
         }
     }
 }
+
