@@ -1,0 +1,5 @@
+# installer outputs / build artifacts
+bin/
+obj/
+*.iss.bak
+.publish/

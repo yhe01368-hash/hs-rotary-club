@@ -12,6 +12,11 @@
     <Authors>Chia Chang</Authors>
     <Company>HsRotaryClub</Company>
     <Description>扶輪社社務行政系統 — WPF 主程式</Description>
+
+    <!-- 用於 Inno Setup installer:AssemblyVersion / AssemblyInformationalVersion -->
+    <Version>0.6.0</Version>
+    <AssemblyVersion>0.6.0.0</AssemblyVersion>
+    <FileVersion>0.6.0.0</FileVersion>
   </PropertyGroup>
 
   <ItemGroup>

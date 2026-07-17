@@ -31,6 +31,9 @@ internal static class Program
         await T18_ClubDonationInOutSum();
         await T19_FriendlyClubSoftDelete();
         await T20_DonationDisplayAttributes();
+        await T21_InstallerArtifactsExist();
+        await T22_InstallerAppIdStable();
+        await T23_DotnetPublishArgs();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -658,6 +661,83 @@ internal static class Program
             Assert(donateProps.GetValueOrDefault("FriendlyClubName") == "友社名稱",
                 $"FriendlyClubName: '{donateProps.GetValueOrDefault("FriendlyClubName")}'");
         });
+    }
+
+    private static async Task T21_InstallerArtifactsExist()
+    {
+        await Run("T21 installer/ 目錄與 .iss / build script 存在", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var installerDir = Path.Combine(projectRoot, "installer");
+            Assert(Directory.Exists(installerDir), $"installer dir not found: {installerDir}");
+
+            var iss = Path.Combine(installerDir, "HsRotaryClub.iss");
+            Assert(File.Exists(iss), ".iss not found");
+            var content = File.ReadAllText(iss);
+            Assert(content.Contains("MyAppName"), ".iss missing MyAppName define");
+            Assert(content.Contains("MyAppVersion"), ".iss missing MyAppVersion define");
+            Assert(content.Contains("0.6.0"), ".iss missing 0.6.0 version");
+
+            var ps1 = Path.Combine(installerDir, "build-installer.ps1");
+            Assert(File.Exists(ps1), "build-installer.ps1 not found");
+
+            var readme = Path.Combine(installerDir, "README.md");
+            Assert(File.Exists(readme), "installer README.md not found");
+        });
+    }
+
+    private static async Task T22_InstallerAppIdStable()
+    {
+        await Run("T22 Inno Setup AppId 固定 (升版才能 reuse UpgradeCode)", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var iss = Path.Combine(projectRoot, "installer", "HsRotaryClub.iss");
+            var content = File.ReadAllText(iss);
+
+            // AppId 必須含 GUID-like
+            Assert(content.Contains("AppId={"), ".iss missing AppId");
+            // GUID 存在 (從內容抽)
+            // Inno escape {{ ... }} → 抓 unwrapped GUID
+            var match = System.Text.RegularExpressions.Regex.Match(content, @"AppId=\{+\{([0-9A-Fa-f\-]+)\}\}+");
+            Assert(match.Success, $"AppId GUID not parseable near line containing 'AppId=':");
+
+            // 不該是 placeholder
+            var guid = match.Groups[1].Value;
+            Assert(guid.Length >= 32 && guid.Length <= 40, $"AppId GUID looks too short: '{guid}'");
+            Assert(!guid.Contains("XXXXX"), "AppId GUID still placeholder");
+            Assert(!guid.Contains("RTR1"), "AppId GUID has placeholder characters (RTR1)");
+            Assert(guid.Count(c => c == '-') == 4, $"AppId GUID should have 4 dashes, got '{guid}'");
+        });
+    }
+
+    private static async Task T23_DotnetPublishArgs()
+    {
+        await Run("T23 dotnet publish parameters 對應 Inno .iss 期望路徑", () =>
+        {
+            var projectRoot = ResolveProjectRoot();
+            var ps1 = Path.Combine(projectRoot, "installer", "build-installer.ps1");
+            var content = File.ReadAllText(ps1);
+
+            // 路徑要對齊 .iss 的 {#PublishDir}
+            Assert(content.Contains("publish\\win-x64"), "publish path should be win-x64");
+            Assert(content.Contains("PublishSingleFile"), "missing PublishSingleFile flag");
+            Assert(content.Contains("--self-contained false"), "should be framework-dependent");
+            Assert(content.Contains("-r win-x64"), "should target win-x64 RID");
+            Assert(content.Contains("Release"), "should use Release configuration");
+        });
+    }
+
+    private static string ResolveProjectRoot()
+    {
+        // SmokeTest bin 在 tests/HsRotaryClub.SmokeTest/bin/Debug/net8.0/
+        // 大概是 5 個 Parent 才到 hs-rotary-club/
+        // 用 target marker: 找到含有 .gitignore 的目錄就當 root
+        var dir = new DirectoryInfo(Path.GetDirectoryName(typeof(Member).Assembly.Location)!);
+        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, ".gitignore")))
+        {
+            dir = dir.Parent;
+        }
+        return dir?.FullName ?? throw new InvalidOperationException("can't find repo root (.gitignore)");
     }
 
     private static RotaryDbContext NewCtx(out string path)
