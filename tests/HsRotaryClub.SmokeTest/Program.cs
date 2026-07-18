@@ -55,6 +55,12 @@ internal static class Program
         await T42_AttendanceRecord();
         await T43_AttendanceRateCalc();
         await T44_AttendanceFilterByYearGroup();
+        await T45_OtherIncomeCRUD();
+        await T46_MonthlyExpenseCRUD();
+        await T47_AccountSubjectAndEntry();
+        await T48_AccountMonthlyReportFormula();
+        await T49_MailJobCreate();
+        await T50_MailRecipientStatus();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1553,6 +1559,7 @@ internal static class Program
             // 用 AttendanceRecord 跑邏輯
             int totalMeetings = 12;  // 一年 12 次例會
             int attendedCount = 12;
+            _ = attendedCount;  // suppress unused warning
             int missedCount = 0;
             double fullAttendanceRate = (totalMeetings - missedCount) / (double)totalMeetings;
             Assert(fullAttendanceRate == 1.0, $"全出席率 should be 1.0, got {fullAttendanceRate:F2}");
@@ -1640,6 +1647,267 @@ internal static class Program
             // 清理
             foreach (var r in ctx.AttendanceRecords.ToList()) ctx.AttendanceRecords.Remove(r);
             foreach (var g in ctx.AttendanceGroups.ToList()) ctx.AttendanceGroups.Remove(g);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T45_OtherIncomeCRUD()
+    {
+        await Run("T45 OtherIncome CRUD: M5 其它收入", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T45 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 5 筆其它收入
+            ctx.OtherIncomes.AddRange(
+                new OtherIncome { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 5), Subject = "銀行利息", Amount = 250m, Category = "利息收入" },
+                new OtherIncome { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 10), Subject = "友社贊助", Amount = 5000m, Category = "贊助" },
+                new OtherIncome { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 15), Subject = "活動報名費", Amount = 3000m, Category = "活動" },
+                new OtherIncome { ClubId = fysw.Id, Year = 2026, Month = 8, TxDate = new DateTime(2026, 8, 5), Subject = "銀行利息", Amount = 260m, Category = "利息收入" },
+                new OtherIncome { ClubId = fysw.Id, Year = 2026, Month = 9, TxDate = new DateTime(2026, 9, 5), Subject = "捐款", Amount = 10000m, Category = "贊助" });
+            ctx.SaveChanges();
+
+            // 7 月總額
+            var july = ctx.OtherIncomes.AsNoTracking()
+                .Where(o => o.ClubId == fysw.Id && o.Year == 2026 && o.Month == 7).ToList();
+            Assert(july.Count == 3, $"7 月應有 3 筆, got {july.Count}");
+            var julyTotal = july.Sum(o => o.Amount);
+            Assert(julyTotal == 8250m, $"7 月總額應為 8250, got {julyTotal}");
+
+            // 清理
+            foreach (var o in ctx.OtherIncomes.ToList()) ctx.OtherIncomes.Remove(o);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T46_MonthlyExpenseCRUD()
+    {
+        await Run("T46 MonthlyExpense CRUD: M5 扶輪月支出", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T46 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 4 筆月支出
+            ctx.MonthlyExpenses.AddRange(
+                new MonthlyExpense { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 1), Subject = "場地租賃", Amount = 3000m, CreditAccount = "2100", Category = "會議費" },
+                new MonthlyExpense { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 5), Subject = "餐費", Amount = 5000m, CreditAccount = "1100", Category = "膳食" },
+                new MonthlyExpense { ClubId = fysw.Id, Year = 2026, Month = 7, TxDate = new DateTime(2026, 7, 10), Subject = "文宣", Amount = 1500m, CreditAccount = "1200", Category = "印刷" },
+                new MonthlyExpense { ClubId = fysw.Id, Year = 2026, Month = 8, TxDate = new DateTime(2026, 8, 1), Subject = "場地租賃", Amount = 3000m, CreditAccount = "2100", Category = "會議費" });
+            ctx.SaveChanges();
+
+            var july = ctx.MonthlyExpenses.AsNoTracking()
+                .Where(m => m.ClubId == fysw.Id && m.Year == 2026 && m.Month == 7).ToList();
+            Assert(july.Count == 3, $"7 月應有 3 筆, got {july.Count}");
+            var julyTotal = july.Sum(m => m.Amount);
+            Assert(julyTotal == 9500m, $"7 月總額應為 9500, got {julyTotal}");
+
+            // 清理
+            foreach (var m in ctx.MonthlyExpenses.ToList()) ctx.MonthlyExpenses.Remove(m);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T47_AccountSubjectAndEntry()
+    {
+        await Run("T47 AccountSubject + AccountEntry: M6 科目 + 月度事實", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T47 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 5 個科目
+            ctx.AccountSubjects.AddRange(
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Income, Code = "I01", Name = "會費收入", AnnualBudget = 100000m },
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Income, Code = "I02", Name = "捐款收入", AnnualBudget = 200000m },
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Income, Code = "I03", Name = "活動收入", AnnualBudget = 50000m },
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Expense, Code = "E01", Name = "會議費", AnnualBudget = 60000m },
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Expense, Code = "E02", Name = "印刷費", AnnualBudget = 12000m });
+            ctx.SaveChanges();
+
+            // 7 月事實
+            ctx.AccountEntries.AddRange(
+                new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = 7, SubjectCode = "I01", ThisMonth = 8500m },
+                new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = 7, SubjectCode = "I02", ThisMonth = 30000m },
+                new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = 7, SubjectCode = "E01", ThisMonth = 5000m },
+                new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = 7, SubjectCode = "E02", ThisMonth = 1000m });
+            ctx.SaveChanges();
+
+            // 科目 CRUD
+            var subjects = ctx.AccountSubjects.AsNoTracking().Where(s => s.ClubId == fysw.Id).ToList();
+            Assert(subjects.Count == 5, $"應有 5 個科目, got {subjects.Count}");
+            var incomes = subjects.Where(s => s.Type == AccountType.Income).ToList();
+            Assert(incomes.Count == 3, $"收入應有 3 個, got {incomes.Count}");
+            var totalBudget = incomes.Sum(i => i.AnnualBudget);
+            Assert(totalBudget == 350000m, $"收入總預算應為 350000, got {totalBudget}");
+
+            // 清理
+            foreach (var e in ctx.AccountEntries.ToList()) ctx.AccountEntries.Remove(e);
+            foreach (var s in ctx.AccountSubjects.ToList()) ctx.AccountSubjects.Remove(s);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T48_AccountMonthlyReportFormula()
+    {
+        await Run("T48 會計月報表公式: 本月收入/本月支出/累計/預算執行率", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T48 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 科目 (I01 預算 100000, E01 預算 60000)
+            ctx.AccountSubjects.AddRange(
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Income, Code = "I01", Name = "會費", AnnualBudget = 100000m },
+                new AccountSubject { ClubId = fysw.Id, Type = AccountType.Expense, Code = "E01", Name = "會議", AnnualBudget = 60000m });
+            ctx.SaveChanges();
+
+            // 月度事實: 1-7 月
+            for (int m = 1; m <= 7; m++)
+            {
+                ctx.AccountEntries.Add(new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = m, SubjectCode = "I01", ThisMonth = 10000m });
+                ctx.AccountEntries.Add(new AccountEntry { ClubId = fysw.Id, Year = 2026, Month = m, SubjectCode = "E01", ThisMonth = 5000m });
+            }
+            ctx.SaveChanges();
+
+            // 計算: 7 月 (本月 + 累計到 7 月)
+            var entries = ctx.AccountEntries.AsNoTracking()
+                .Where(e => e.ClubId == fysw.Id && e.Year == 2026).ToList();
+
+            // I01: 本月 7 月 = 10000, 累計 1-7 月 = 70000
+            var i01July = entries.Where(e => e.SubjectCode == "I01" && e.Month == 7).Sum(e => e.ThisMonth);
+            Assert(i01July == 10000m, $"I01 7月 本月應為 10000, got {i01July}");
+            var i01YTD = entries.Where(e => e.SubjectCode == "I01" && e.Month <= 7).Sum(e => e.ThisMonth);
+            Assert(i01YTD == 70000m, $"I01 累計 1-7 月應為 70000, got {i01YTD}");
+
+            // 預算執行率 = 累計 / 年度預算
+            var i01Budget = ctx.AccountSubjects.AsNoTracking().First(s => s.Code == "I01").AnnualBudget;
+            double i01Exec = (double)(i01YTD / i01Budget);
+            Assert(i01Exec > 0.69 && i01Exec < 0.71, $"I01 執行率 ~0.70, got {i01Exec:F2}");
+
+            // E01: 本月 7 月 = 5000, 累計 = 35000
+            var e01July = entries.Where(e => e.SubjectCode == "E01" && e.Month == 7).Sum(e => e.ThisMonth);
+            Assert(e01July == 5000m, $"E01 7月 本月應為 5000, got {e01July}");
+            var e01YTD = entries.Where(e => e.SubjectCode == "E01" && e.Month <= 7).Sum(e => e.ThisMonth);
+            Assert(e01YTD == 35000m, $"E01 累計應為 35000, got {e01YTD}");
+
+            // 清理
+            foreach (var e in ctx.AccountEntries.ToList()) ctx.AccountEntries.Remove(e);
+            foreach (var s in ctx.AccountSubjects.ToList()) ctx.AccountSubjects.Remove(s);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T49_MailJobCreate()
+    {
+        await Run("T49 MailJob: M7 信件 (主旨/內容/附件/排程類型)", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T49 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            var job = new MailJob
+            {
+                ClubId = fysw.Id,
+                Subject = "2026年7月份例會通知",
+                Content = "各位社友大家好,本月例會於 7/3 下午 6:30 召開,地點:...",
+                AttachmentPath = @"C:\meetings\2026_07.pdf",
+                ScheduleType = "Annual",
+            };
+            ctx.MailJobs.Add(job);
+            ctx.SaveChanges();
+            Assert(job.Id > 0, $"job id 應 > 0, got {job.Id}");
+
+            // re-query
+            var loaded = ctx.MailJobs.AsNoTracking().First();
+            Assert(loaded.Subject == "2026年7月份例會通知", $"Subject mismatch: {loaded.Subject}");
+            Assert(loaded.ScheduleType == "Annual", $"ScheduleType mismatch: {loaded.ScheduleType}");
+            Assert(loaded.AttachmentPath != null, "AttachmentPath should be set");
+
+            // 清理
+            foreach (var j in ctx.MailJobs.ToList()) ctx.MailJobs.Remove(j);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T50_MailRecipientStatus()
+    {
+        await Run("T50 MailRecipient: 收件人清單 + 寄送狀態追蹤", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T50 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            ctx.Members.Add(new Member { Code = 301, Name = "張三", ClubId = fysw.Id, IsCurrent = true, Email = "a@a.com" });
+            ctx.Members.Add(new Member { Code = 302, Name = "李四", ClubId = fysw.Id, IsCurrent = true, Email = "b@b.com" });
+            ctx.Members.Add(new Member { Code = 303, Name = "王五", ClubId = fysw.Id, IsCurrent = true, Email = "c@c.com" });
+            ctx.SaveChanges();
+
+            var job = new MailJob { ClubId = fysw.Id, Subject = "T50 test", Content = "hi", ScheduleType = "OneOff" };
+            ctx.MailJobs.Add(job);
+            ctx.SaveChanges();
+
+            // 3 收件人
+            foreach (var m in ctx.Members.ToList())
+            {
+                ctx.MailRecipients.Add(new MailRecipient
+                {
+                    MailJobId = job.Id,
+                    MemberCode = m.Code,
+                    MemberName = m.Name,
+                    Email = m.Email!,
+                    Status = MailSendStatus.Pending,
+                });
+            }
+            ctx.SaveChanges();
+
+            // 收件人 CRUD
+            var recipients = ctx.MailRecipients.AsNoTracking()
+                .Where(r => r.MailJobId == job.Id).ToList();
+            Assert(recipients.Count == 3, $"應有 3 個收件人, got {recipients.Count}");
+            Assert(recipients.All(r => r.Status == MailSendStatus.Pending), "all should be Pending");
+
+            // 模擬寄送
+            var toSend = recipients.First();
+            var tracked = ctx.MailRecipients.First(r => r.Id == toSend.Id);
+            tracked.Status = MailSendStatus.Sent;
+            tracked.SentAt = DateTime.UtcNow;
+            ctx.SaveChanges();
+
+            var sent = ctx.MailRecipients.AsNoTracking().Where(r => r.Status == MailSendStatus.Sent).Count();
+            Assert(sent == 1, $"應有 1 筆 Sent, got {sent}");
+
+            // 模擬失敗
+            var tracked2 = ctx.MailRecipients.First(r => r.MemberCode == 303);
+            tracked2.Status = MailSendStatus.Failed;
+            tracked2.ErrorMessage = "Email not exist";
+            ctx.SaveChanges();
+            var failed = ctx.MailRecipients.AsNoTracking().Where(r => r.Status == MailSendStatus.Failed).Count();
+            Assert(failed == 1, $"應有 1 筆 Failed, got {failed}");
+
+            // 清理
+            foreach (var r in ctx.MailRecipients.ToList()) ctx.MailRecipients.Remove(r);
+            foreach (var j in ctx.MailJobs.ToList()) ctx.MailJobs.Remove(j);
+            foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
         });

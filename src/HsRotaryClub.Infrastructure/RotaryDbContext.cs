@@ -16,6 +16,12 @@ public class RotaryDbContext : DbContext
     public DbSet<ClubDonation> ClubDonations => Set<ClubDonation>();
     public DbSet<AttendanceGroup> AttendanceGroups => Set<AttendanceGroup>();  // v0.10
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();  // v0.10
+    public DbSet<OtherIncome> OtherIncomes => Set<OtherIncome>();  // v0.12
+    public DbSet<MonthlyExpense> MonthlyExpenses => Set<MonthlyExpense>();  // v0.12
+    public DbSet<AccountSubject> AccountSubjects => Set<AccountSubject>();  // v0.12
+    public DbSet<AccountEntry> AccountEntries => Set<AccountEntry>();  // v0.12
+    public DbSet<MailJob> MailJobs => Set<MailJob>();  // v0.12
+    public DbSet<MailRecipient> MailRecipients => Set<MailRecipient>();  // v0.12
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -110,6 +116,65 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
             e.HasIndex(x => new { x.ClubId, x.Year, x.MemberCode });
             e.HasIndex(x => x.MeetingDate);
+        });
+
+        // v0.12 — M5 其它收支
+        mb.Entity<OtherIncome>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Subject).HasMaxLength(50);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.Property(x => x.Category).HasMaxLength(30);
+            e.Property(x => x.VoucherNo).HasMaxLength(20);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Year, x.Month });
+        });
+        mb.Entity<MonthlyExpense>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Subject).HasMaxLength(50);
+            e.Property(x => x.Description).HasMaxLength(200);
+            e.Property(x => x.CreditAccount).HasMaxLength(20);
+            e.Property(x => x.Category).HasMaxLength(30);
+            e.Property(x => x.VoucherNo).HasMaxLength(20);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Year, x.Month });
+        });
+
+        // v0.12 — M6 會計
+        mb.Entity<AccountSubject>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Code).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(50).IsRequired();
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Type, x.Code }).IsUnique();
+        });
+        mb.Entity<AccountEntry>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.SubjectCode).HasMaxLength(20);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Year, x.Month, x.SubjectCode }).IsUnique();
+        });
+
+        // v0.12 — M7 信件
+        mb.Entity<MailJob>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Subject).HasMaxLength(200).IsRequired();
+            e.Property(x => x.AttachmentPath).HasMaxLength(500);
+            e.Property(x => x.ScheduleType).HasMaxLength(20);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => x.ClubId);
+        });
+        mb.Entity<MailRecipient>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MemberName).HasMaxLength(50);
+            e.Property(x => x.Email).HasMaxLength(200);
+            e.Property(x => x.ErrorMessage).HasMaxLength(500);
+            e.HasIndex(x => x.MailJobId);
         });
     }
 }
