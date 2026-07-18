@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using HsRotaryClub.App.Controls;
 using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Domain;
 using HsRotaryClub.Infrastructure;
@@ -126,5 +127,13 @@ public partial class ClubManagementViewModel : ObservableObject
         if (Selected is null) return;
         _currentClubCtx.SetCurrent(Selected.Id, Selected.Name);
         StatusMessage = $"已切到「{Selected.Name}」為操作社";
+    }
+
+    /// <summary>v0.8 — 拉 ImportExport dialog。</summary>
+    [RelayCommand]
+    private void ImportExport()
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        ImportExportDialog.Show(_db, _currentClubCtx.CurrentClubId, _currentClubCtx.CurrentClubName, owner);
     }
 }

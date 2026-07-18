@@ -23,6 +23,7 @@
             <Button Content="儲存"      Command="{Binding SaveCommand}"           Padding="8,4" Margin="4,0" Background="#FFD27F"/>
             <Button Content="停用"      Command="{Binding DeactivateCommand}"     Padding="8,4" Margin="4,0"/>
             <Button Content="切為操作社" Command="{Binding MakeCurrentCommand}"  Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
+            <Button Content="匯出 / 匯入" Command="{Binding ImportExportCommand}" Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
         </DockPanel>
 
         <!-- 中: 左速查 + 右表單 -->

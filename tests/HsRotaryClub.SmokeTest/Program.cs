@@ -45,6 +45,7 @@ internal static class Program
         await T32_ClubPickerLogic();
         await T33_DataTransferExport();
         await T34_DataTransferRoundTrip();
+        await T35_ImportExportDialogLogic();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1218,6 +1219,54 @@ internal static class Program
             foreach (var c in dbB.Clubs.ToList()) dbB.Clubs.Remove(c);
             dbB.SaveChanges();
             dbB.Dispose();
+        });
+    }
+
+    private static async Task T35_ImportExportDialogLogic()
+    {
+        await Run("T35 ImportExportDialog: 用 text 模擬 dialog 行為 (檔案選擇 + 預覽 + 執行)", () =>
+        {
+            // 模擬整個 dialog 流程 — 因為 dialog 是 WPF 不可測,測其後端邏輯
+            using var dbA = NewCtx(out _);
+            var fysw = new Club { Name = "T35 豐原西南", IsActive = true };
+            dbA.Clubs.Add(fysw);
+            dbA.SaveChanges();
+            dbA.Members.Add(new Member { Code = 301, Name = "王小明", ClubId = fysw.Id, IsCurrent = true });
+            dbA.SaveChanges();  // v0.8.1 fix: ExportToJson 走 EF query,需要 SaveChanges 才看得到
+
+            // Step 1: 匯出到 temp 檔 (模擬「瀏覽… + 執行 匯出」)
+            var tmp = Path.Combine(Path.GetTempPath(), $"importexport_{Guid.NewGuid():N}.json");
+            try
+            {
+                var json = DataTransferEngine.ExportToJson(dbA, clubId: fysw.Id);
+                File.WriteAllText(tmp, json);
+                Assert(File.Exists(tmp), "exported file not created");
+                var size = new FileInfo(tmp).Length;
+                Assert(size > 100, $"exported file too small: {size}");
+            }
+            finally
+            {
+                if (File.Exists(tmp)) File.Delete(tmp);
+            }
+
+            // Step 2: 預覽 (parse JSON 拿 counts)
+            var previewJson = DataTransferEngine.ExportToJson(dbA, clubId: fysw.Id);
+            Assert(previewJson.Contains("T35 豐原西南"), "preview should contain club name");
+
+            // Step 3: 跳過已存在 (round-trip to empty db → 全部 insert)
+            using var dbB = NewCtx(out _);
+            var result = DataTransferEngine.ImportFromJson(dbB, previewJson, skipExisting: true);
+            Assert(result.ClubsInserted == 1, $"expected 1 club, got {result.ClubsInserted}");
+            Assert(result.MembersInserted == 1, $"expected 1 member, got {result.MembersInserted}");
+            Assert(result.Summary.Contains("成功"), $"summary should contain 成功: {result.Summary}");
+
+            // 清理
+            foreach (var m in dbB.Members.ToList()) dbB.Members.Remove(m);
+            foreach (var c in dbB.Clubs.ToList()) dbB.Clubs.Remove(c);
+            dbB.SaveChanges();
+            foreach (var m in dbA.Members.ToList()) dbA.Members.Remove(m);
+            foreach (var c in dbA.Clubs.ToList()) dbA.Clubs.Remove(c);
+            dbA.SaveChanges();
         });
     }
 
