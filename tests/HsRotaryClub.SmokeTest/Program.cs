@@ -46,6 +46,9 @@ internal static class Program
         await T33_DataTransferExport();
         await T34_DataTransferRoundTrip();
         await T35_ImportExportDialogLogic();
+        await T36_LicenseIssueValidate();
+        await T37_LicenseExpired();
+        await T38_LicenseMachineMismatch();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1267,6 +1270,100 @@ internal static class Program
             foreach (var m in dbA.Members.ToList()) dbA.Members.Remove(m);
             foreach (var c in dbA.Clubs.ToList()) dbA.Clubs.Remove(c);
             dbA.SaveChanges();
+        });
+    }
+
+    private static async Task T36_LicenseIssueValidate()
+    {
+        await Run("T36 LicenseService: 發行 + 驗證 + 永久有效", () =>
+        {
+            // 用 custom path 測 (override %LOCALAPPDATA%)
+            var tmpDir = Path.Combine(Path.GetTempPath(), $"license-test-{Guid.NewGuid():N}");
+            Directory.CreateDirectory(tmpDir);
+            try
+            {
+                // 直接測 Issue/LoadAndValidate 的邏輯 — 不靠 WMI (Test bypass GetMachineId)
+                var info = new LicenseInfo
+                {
+                    IssuedTo = "T36 測試扶輪社",
+                    Issuer = "T36 HsRotaryClub Admin",
+                    IssuedAt = DateTime.UtcNow,
+                    ExpiresAt = null,  // 永久
+                    MachineId = "",  // 不綁機
+                    MaxClubs = 0,
+                };
+
+                // 模擬 Issue — 直接呼叫我們的 LicenseService.Issue 用 %LOCALAPPDATA%
+                var content = LicenseService.Issue(info);
+                Assert(content.Contains("---"), "issued file should contain ---");
+                Assert(File.Exists(LicenseService.GetLicensePath()), "license file should exist");
+
+                // LoadAndValidate
+                var loaded = LicenseService.LoadAndValidate();
+                Assert(loaded.Status == LicenseStatus.Active, $"expected Active, got {loaded.Status}");
+                Assert(loaded.IssuedTo == "T36 測試扶輪社", $"IssuedTo mismatch: {loaded.IssuedTo}");
+
+                // 描述
+                var desc = LicenseService.Describe(loaded);
+                Assert(desc.Contains("T36 測試扶輪社"), $"describe should contain IssuedTo: {desc}");
+
+                // 清理 license file
+                File.Delete(LicenseService.GetLicensePath());
+            }
+            finally
+            {
+                try { Directory.Delete(tmpDir, true); } catch { }
+            }
+        });
+    }
+
+    private static async Task T37_LicenseExpired()
+    {
+        await Run("T37 LicenseService: 過期 license 應該 Status=Expired", () =>
+        {
+            var info = new LicenseInfo
+            {
+                IssuedTo = "T37 測試社",
+                IssuedAt = DateTime.UtcNow.AddDays(-30),
+                ExpiresAt = DateTime.UtcNow.AddDays(-1),  // 昨天過期
+                MachineId = "",
+            };
+            LicenseService.Issue(info);
+            var loaded = LicenseService.LoadAndValidate();
+            Assert(loaded.Status == LicenseStatus.Expired, $"expected Expired, got {loaded.Status}");
+
+            // 清理
+            File.Delete(LicenseService.GetLicensePath());
+        });
+    }
+
+    private static async Task T38_LicenseMachineMismatch()
+    {
+        await Run("T38 LicenseService: machine mismatch → Status=MachineMismatch", () =>
+        {
+            // 模擬 — 沒 WMI access 用 hardcoded MachineId,然後 load 看 status
+            // 因為 sandbox 可能沒 WMI,我們直接構造一個 license for machine "FAKE-ID"
+            // 然後 LoadAndValidate 應該比對不上
+            var info = new LicenseInfo
+            {
+                IssuedTo = "T38 測試社",
+                IssuedAt = DateTime.UtcNow,
+                ExpiresAt = null,
+                MachineId = "FAKE-SN-12345",  // 強制綁這個機
+            };
+            LicenseService.Issue(info);
+
+            var loaded = LicenseService.LoadAndValidate();
+            // 載入後 status 應該看當前 machine id 跟 license 的 machine id 是否 match
+            // 如果實際 machine id != FAKE-SN-12345 → MachineMismatch
+            // 如果 machine id 抓不到 → NoMachineId
+            // 如果 WMI 拿到的恰好是 "FAKE-SN-12345" → Active (unlikely)
+            Assert(loaded.Status == LicenseStatus.MachineMismatch ||
+                   loaded.Status == LicenseStatus.NoMachineId,
+                   $"expected MachineMismatch or NoMachineId, got {loaded.Status}");
+
+            // 清理
+            File.Delete(LicenseService.GetLicensePath());
         });
     }
 

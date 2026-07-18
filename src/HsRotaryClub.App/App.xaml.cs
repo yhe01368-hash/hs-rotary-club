@@ -48,6 +48,11 @@ public partial class App : Application
             scope.ServiceProvider.GetRequiredService<DbInitializer>().Initialize();
         }
 
+        // v0.9 — license 載入 + 狀態檢查
+        var license = LicenseService.LoadAndValidate();
+        // TODO: Trial mode 限制 1 club / 7 天 (v0.9.1)
+        System.Diagnostics.Debug.WriteLine($"[License] {LicenseService.Describe(license)}");
+
         // v0.7 A4 — 啟動時選社 (Db 裡有 2+ 個 active club 才拉 picker,只有 default 一個直接跳過)
         var currentClubCtx = Services.GetRequiredService<CurrentClubContext>();
         using (var initScope = Services.CreateScope())
