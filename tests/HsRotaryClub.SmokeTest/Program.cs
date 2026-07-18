@@ -49,6 +49,8 @@ internal static class Program
         await T36_LicenseIssueValidate();
         await T37_LicenseExpired();
         await T38_LicenseMachineMismatch();
+        await T39_TrialCanAddClub();
+        await T40_LicenseMaxClubs();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1361,6 +1363,64 @@ internal static class Program
             Assert(loaded.Status == LicenseStatus.MachineMismatch ||
                    loaded.Status == LicenseStatus.NoMachineId,
                    $"expected MachineMismatch or NoMachineId, got {loaded.Status}");
+
+            // 清理
+            File.Delete(LicenseService.GetLicensePath());
+        });
+    }
+
+    private static async Task T39_TrialCanAddClub()
+    {
+        await Run("T39 Trial mode: trial license 限制 1 club;第 2 club 拒絕", () =>
+        {
+            // 確保沒有 license.dat → 算 trial
+            var licPath = LicenseService.GetLicensePath();
+            if (File.Exists(licPath)) File.Delete(licPath);
+
+            // Trial mode → LicenseInfo with Status=Trial (no license file → Trial)
+            var trial = LicenseService.LoadAndValidate();
+            Assert(trial.Status == LicenseStatus.Trial, $"expected Trial, got {trial.Status}");
+
+            // 第 1 club 應該 OK
+            var (allowed1, reason1) = LicenseAdmin.CanAddClub(trial, currentActiveClubs: 0);
+            Assert(allowed1, $"1st club should be allowed, got reason: {reason1}");
+
+            // 第 2 club 應該被擋
+            var (allowed2, reason2) = LicenseAdmin.CanAddClub(trial, currentActiveClubs: 1);
+            Assert(!allowed2, $"2nd club should be blocked");
+            Assert(reason2.Contains("上限") || reason2.Contains("license"), $"reason should mention limit: {reason2}");
+        });
+    }
+
+    private static async Task T40_LicenseMaxClubs()
+    {
+        await Run("T40 Active license + MaxClubs: 第 N+1 club 拒絕", () =>
+        {
+            // 設一個永久 license, MaxClubs=3
+            var info = new LicenseInfo
+            {
+                IssuedTo = "T40 測試社",
+                IssuedAt = DateTime.UtcNow,
+                ExpiresAt = null,
+                MachineId = "",  // 不綁機
+                MaxClubs = 3,
+            };
+            LicenseService.Issue(info);
+
+            var loaded = LicenseService.LoadAndValidate();
+            Assert(loaded.Status == LicenseStatus.Active, $"expected Active, got {loaded.Status}");
+            Assert(loaded.MaxClubs == 3, $"MaxClubs should be 3, got {loaded.MaxClubs}");
+
+            // 0, 1, 2 個 club → OK
+            for (int i = 0; i < 3; i++)
+            {
+                var (ok, _) = LicenseAdmin.CanAddClub(loaded, currentActiveClubs: i);
+                Assert(ok, $"club {i+1} should be allowed (max=3)");
+            }
+            // 第 4 個 → 拒絕
+            var (ok4, reason4) = LicenseAdmin.CanAddClub(loaded, currentActiveClubs: 3);
+            Assert(!ok4, $"4th club should be blocked");
+            Assert(reason4.Contains("3"), $"reason should mention limit 3: {reason4}");
 
             // 清理
             File.Delete(LicenseService.GetLicensePath());
