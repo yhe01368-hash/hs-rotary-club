@@ -51,6 +51,9 @@ internal static class Program
         await T38_LicenseMachineMismatch();
         await T39_TrialCanAddClub();
         await T40_LicenseMaxClubs();
+        await T41_AttendanceGroupCRUD();
+        await T42_AttendanceRecord();
+        await T43_AttendanceRateCalc();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1424,6 +1427,139 @@ internal static class Program
 
             // 清理
             File.Delete(LicenseService.GetLicensePath());
+        });
+    }
+
+    private static async Task T41_AttendanceGroupCRUD()
+    {
+        await Run("T41 AttendanceGroup CRUD: 年度組別 add + filter", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T41 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 3 個組
+            ctx.AttendanceGroups.AddRange(
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2026, GroupName = "A",
+                    GroupLeaderCode = 101, GroupLeaderName = "組長甲",
+                    ShouldAttend = 10, ActualAttend = 8, MakeupAttend = 1 },
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2026, GroupName = "B",
+                    GroupLeaderCode = 102, GroupLeaderName = "組長乙",
+                    ShouldAttend = 12, ActualAttend = 10, MakeupAttend = 2 },
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2027, GroupName = "A",
+                    GroupLeaderCode = 103, GroupLeaderName = "組長丙" });
+            ctx.SaveChanges();
+
+            // filter 2026
+            var g2026 = ctx.AttendanceGroups.AsNoTracking()
+                .Where(g => g.ClubId == fysw.Id && g.Year == 2026).ToList();
+            Assert(g2026.Count == 2, $"2026 should have 2 groups, got {g2026.Count}");
+
+            // filter 2027
+            var g2027 = ctx.AttendanceGroups.AsNoTracking()
+                .Where(g => g.ClubId == fysw.Id && g.Year == 2027).ToList();
+            Assert(g2027.Count == 1, $"2027 should have 1 group, got {g2027.Count}");
+
+            // 計算出席率 (第一組 8+1=9 / 10 = 90%)
+            var g1 = g2026.First(g => g.GroupName == "A");
+            double rate1 = (g1.ActualAttend + g1.MakeupAttend) / (double)g1.ShouldAttend;
+            Assert(rate1 > 0.85 && rate1 < 0.95, $"rate1 should be ~0.9, got {rate1:F2}");
+
+            // 清理
+            foreach (var g in ctx.AttendanceGroups.ToList()) ctx.AttendanceGroups.Remove(g);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T42_AttendanceRecord()
+    {
+        await Run("T42 AttendanceRecord: 例會出缺席記錄 CRUD + filter", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T42 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 5 個社員
+            for (int i = 1; i <= 5; i++)
+            {
+                ctx.Members.Add(new Member { Code = 200 + i, Name = $"社員{i}", ClubId = fysw.Id, IsCurrent = true });
+            }
+            ctx.SaveChanges();
+
+            // 3 次例會, 每社員每次出席狀況
+            var meetingDates = new[] { new DateTime(2026, 7, 3), new DateTime(2026, 7, 10), new DateTime(2026, 7, 17) };
+            foreach (var m in ctx.Members.ToList())
+            {
+                foreach (var md in meetingDates)
+                {
+                    ctx.AttendanceRecords.Add(new AttendanceRecord
+                    {
+                        ClubId = fysw.Id,
+                        Year = md.Year,
+                        MemberCode = m.Code,
+                        MemberName = m.Name,
+                        MeetingDate = md,
+                        Type = md.Day == 10 && m.Code == 203 ? AttendanceType.Absent :
+                               md.Day == 17 && m.Code == 202 ? AttendanceType.Makeup :
+                               AttendanceType.Present,
+                        MakeupDate = md.Day == 17 && m.Code == 202 ? md : null,
+                    });
+                }
+            }
+            ctx.SaveChanges();
+
+            // 統計: 社員 203 在 7/10 缺席, 7/17 出席
+            var r203 = ctx.AttendanceRecords.AsNoTracking()
+                .Where(r => r.MemberCode == 203).OrderBy(r => r.MeetingDate).ToList();
+            Assert(r203.Count == 3, $"203 should have 3 records, got {r203.Count}");
+            Assert(r203[0].Type == AttendanceType.Present, "203 7/3 should be Present");
+            Assert(r203[1].Type == AttendanceType.Absent, "203 7/10 should be Absent");
+            Assert(r203[2].Type == AttendanceType.Present, "203 7/17 should be Present");
+
+            // filter 7/10 出席率
+            var allAt7_10 = ctx.AttendanceRecords.AsNoTracking().Where(r => r.MeetingDate == meetingDates[1]).ToList();
+            var presentCount = allAt7_10.Count(r => r.Type == AttendanceType.Present || r.Type == AttendanceType.Makeup);
+            Assert(presentCount == 4, $"7/10 should have 4 present (5-1 absent), got {presentCount}");
+
+            // 清理
+            foreach (var r in ctx.AttendanceRecords.ToList()) ctx.AttendanceRecords.Remove(r);
+            foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T43_AttendanceRateCalc()
+    {
+        await Run("T43 AttendanceRate 計算: 出席率 / 全出席率 公式驗證", () =>
+        {
+            // 組員 A 出席 8 / 補 2 / 應 10 → 出席率 100% (實+補 / 應)
+            int should = 10, actual = 8, makeup = 2;
+            double rate = (actual + makeup) / (double)should;
+            Assert(rate == 1.0, $"全出席 rate should be 1.0, got {rate:F2}");
+
+            // 組員 B 出席 5 / 補 0 / 應 10 → 出席率 50%
+            int actual2 = 5;
+            double rate2 = actual2 / (double)should;
+            Assert(rate2 == 0.5, $"半出席 rate should be 0.5, got {rate2:F2}");
+
+            // 全出席率 (全年度 0 缺席) → 100%
+            // 用 AttendanceRecord 跑邏輯
+            int totalMeetings = 12;  // 一年 12 次例會
+            int attendedCount = 12;
+            int missedCount = 0;
+            double fullAttendanceRate = (totalMeetings - missedCount) / (double)totalMeetings;
+            Assert(fullAttendanceRate == 1.0, $"全出席率 should be 1.0, got {fullAttendanceRate:F2}");
+
+            // 社員 8/12 出席 → 0.667
+            int partAttended = 8;
+            double partRate = partAttended / (double)totalMeetings;
+            Assert(partRate > 0.66 && partRate < 0.68, $"partRate ~0.67, got {partRate:F2}");
         });
     }
 

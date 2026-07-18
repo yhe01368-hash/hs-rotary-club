@@ -5,14 +5,17 @@ namespace HsRotaryClub.Infrastructure;
 
 public class RotaryDbContext : DbContext
 {
+    public RotaryDbContext() { }
     public RotaryDbContext(DbContextOptions<RotaryDbContext> options) : base(options) { }
 
+    public DbSet<Club> Clubs => Set<Club>();
     public DbSet<Member> Members => Set<Member>();
     public DbSet<ClubCollection> ClubCollections => Set<ClubCollection>();
     public DbSet<MonthlyReceivableSpec> MonthlyReceivableSpecs => Set<MonthlyReceivableSpec>();
     public DbSet<FriendlyClub> FriendlyClubs => Set<FriendlyClub>();
     public DbSet<ClubDonation> ClubDonations => Set<ClubDonation>();
-    public DbSet<Club> Clubs => Set<Club>();
+    public DbSet<AttendanceGroup> AttendanceGroups => Set<AttendanceGroup>();  // v0.10
+    public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();  // v0.10
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -81,11 +84,32 @@ public class RotaryDbContext : DbContext
         {
             e.HasKey(x => x.Id);
             e.Property(x => x.Amount).HasDefaultValue(0m);
+            e.Property(x => x.Purpose).HasMaxLength(100);
             e.HasIndex(x => x.FriendlyClubId);
+            e.HasIndex(x => x.TxDate);
             e.HasOne<FriendlyClub>()
                 .WithMany()
                 .HasForeignKey(x => x.FriendlyClubId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // v0.10 — 出席模組
+        mb.Entity<AttendanceGroup>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.GroupName).HasMaxLength(20).IsRequired();
+            e.Property(x => x.GroupLeaderName).HasMaxLength(50);
+            e.Property(x => x.GroupMemberName).HasMaxLength(50);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Year, x.GroupName });
+        });
+        mb.Entity<AttendanceRecord>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.MemberName).HasMaxLength(50);
+            e.Property(x => x.ClubId).HasDefaultValue(ClubDefaults.DefaultClubId);
+            e.HasIndex(x => new { x.ClubId, x.Year, x.MemberCode });
+            e.HasIndex(x => x.MeetingDate);
         });
     }
 }
