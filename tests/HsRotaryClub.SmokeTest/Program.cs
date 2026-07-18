@@ -63,6 +63,7 @@ internal static class Program
         await T50_MailRecipientStatus();
         await T51_MigrationMissingFile();
         await T52_MigrationResultSummary();
+        await T53_DbInitializerRecreate();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1955,6 +1956,61 @@ internal static class Program
             Assert(s.Contains("AttendanceGroups 4 imported"), $"should say AttendanceGroups 4 imported: {s}");
             Assert(s.Contains("Errors 0"), $"should say Errors 0: {s}");
         });
+    }
+
+    private static async Task T53_DbInitializerRecreate()
+    {
+        await Run("T53 DbInitializer: 舊 db 無 Clubs table → 砍掉重建", () =>
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"smoketest-init-{Guid.NewGuid():N}.db");
+            try
+            {
+                // 直接用 sqlite 建空 db (有 header 但無 Clubs)
+                using (var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False"))
+                {
+                    conn.Open();
+                }
+                Assert(File.Exists(path), "test db should exist");
+                Assert(!DbInitializerHasTableForTest(path, "Clubs"), "test db should NOT have Clubs");
+
+                // 模擬 EnsureCreated 建 Clubs table
+                using (var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False"))
+                {
+                    conn.Open();
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "CREATE TABLE Clubs (Id INTEGER PRIMARY KEY, Name TEXT)";
+                    cmd.ExecuteNonQuery();
+                }
+                Assert(DbInitializerHasTableForTest(path, "Clubs"), "after CREATE, Clubs should exist");
+            }
+            finally
+            {
+                // wait briefly for SQLite file locks to release
+                System.Threading.Thread.Sleep(100);
+                if (File.Exists(path)) File.Delete(path);
+            }
+        });
+    }
+
+    private static bool DbInitializerHasTableForTest(string path, string tableName)
+    {
+        try
+        {
+            using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False");
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=$name";
+            var p = cmd.CreateParameter();
+            p.ParameterName = "$name";
+            p.Value = tableName;
+            cmd.Parameters.Add(p);
+            var count = Convert.ToInt32(cmd.ExecuteScalar());
+            return count > 0;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private static RotaryDbContext NewCtx(out string path)
