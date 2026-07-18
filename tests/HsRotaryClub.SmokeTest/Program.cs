@@ -54,6 +54,7 @@ internal static class Program
         await T41_AttendanceGroupCRUD();
         await T42_AttendanceRecord();
         await T43_AttendanceRateCalc();
+        await T44_AttendanceFilterByYearGroup();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1560,6 +1561,87 @@ internal static class Program
             int partAttended = 8;
             double partRate = partAttended / (double)totalMeetings;
             Assert(partRate > 0.66 && partRate < 0.68, $"partRate ~0.67, got {partRate:F2}");
+        });
+    }
+
+    private static async Task T44_AttendanceFilterByYearGroup()
+    {
+        await Run("T44 AttendanceViewModel filter: 年度 + 組別 雙 filter 邏輯", () =>
+        {
+            using var ctx = NewCtx(out _);
+
+            var fysw = new Club { Name = "T44 豐原西南", IsActive = true };
+            ctx.Clubs.Add(fysw);
+            ctx.SaveChanges();
+
+            // 2 年度 × 3 組
+            ctx.AttendanceGroups.AddRange(
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2026, GroupName = "A", GroupLeaderCode = 1, GroupLeaderName = "甲", GroupMemberCode = 2, GroupMemberName = "乙" },
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2026, GroupName = "B", GroupLeaderCode = 3, GroupLeaderName = "丙", GroupMemberCode = 4, GroupMemberName = "丁" },
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2026, GroupName = "C", GroupLeaderCode = 5, GroupLeaderName = "戊", GroupMemberCode = 6, GroupMemberName = "己" },
+                new AttendanceGroup { ClubId = fysw.Id, Year = 2027, GroupName = "A", GroupLeaderCode = 7, GroupLeaderName = "庚" });
+            ctx.SaveChanges();
+
+            // filter 2026 → 3 組
+            var g2026 = ctx.AttendanceGroups.AsNoTracking()
+                .Where(g => g.ClubId == fysw.Id && g.Year == 2026).ToList();
+            Assert(g2026.Count == 3, $"2026 should have 3 groups, got {g2026.Count}");
+
+            // filter 2027 → 1 組
+            var g2027 = ctx.AttendanceGroups.AsNoTracking()
+                .Where(g => g.ClubId == fysw.Id && g.Year == 2027).ToList();
+            Assert(g2027.Count == 1, $"2027 should have 1 group, got {g2027.Count}");
+
+            // 模擬 AttendanceViewModel 取 "選定組別" 的出席記錄邏輯
+            var selGroup = g2026.First(g => g.GroupName == "A");
+            var leaderCode = selGroup.GroupLeaderCode;  // 1
+            var memberCode = selGroup.GroupMemberCode;  // 2
+            // 模擬 3 次例會
+            var meetings = new[] { new DateTime(2026, 7, 3), new DateTime(2026, 7, 10), new DateTime(2026, 7, 17) };
+            foreach (var md in meetings)
+            {
+                ctx.AttendanceRecords.Add(new AttendanceRecord
+                {
+                    ClubId = fysw.Id, Year = 2026, MeetingDate = md,
+                    MemberCode = leaderCode, MemberName = "甲", Type = AttendanceType.Present,
+                });
+                ctx.AttendanceRecords.Add(new AttendanceRecord
+                {
+                    ClubId = fysw.Id, Year = 2026, MeetingDate = md,
+                    MemberCode = memberCode, MemberName = "乙", Type = AttendanceType.Present,
+                });
+            }
+            // 額外一筆給 2027 的組長 (7)
+            ctx.AttendanceRecords.Add(new AttendanceRecord
+            {
+                ClubId = fysw.Id, Year = 2027, MeetingDate = new DateTime(2027, 7, 3),
+                MemberCode = 7, MemberName = "庚", Type = AttendanceType.Present,
+            });
+            ctx.SaveChanges();
+
+            // VM 邏輯: 取選定組別 (A 組) 的 leader + member 出席記錄
+            var vmFilter = ctx.AttendanceRecords.AsNoTracking()
+                .Where(r => r.ClubId == fysw.Id && r.Year == 2026 &&
+                            (r.MemberCode == leaderCode || r.MemberCode == memberCode))
+                .OrderBy(r => r.MeetingDate).ToList();
+            Assert(vmFilter.Count == 6, $"A 組應有 6 筆 (2 人 × 3 例會), got {vmFilter.Count}");
+            Assert(vmFilter.All(r => r.Year == 2026), "all should be 2026");
+            Assert(vmFilter.Select(r => r.MemberCode).Distinct().OrderBy(c => c).SequenceEqual(new[] { 1, 2 }),
+                $"should only have members 1 and 2, got [{string.Join(",", vmFilter.Select(r => r.MemberCode).Distinct())}]");
+
+            // 切到 2027 A 組 → 1 筆
+            var g2027A = g2027.First(g => g.GroupName == "A");
+            var vm2027 = ctx.AttendanceRecords.AsNoTracking()
+                .Where(r => r.ClubId == fysw.Id && r.Year == 2027 &&
+                            (r.MemberCode == g2027A.GroupLeaderCode || r.MemberCode == g2027A.GroupMemberCode))
+                .ToList();
+            Assert(vm2027.Count == 1, $"2027 A 組應有 1 筆, got {vm2027.Count}");
+
+            // 清理
+            foreach (var r in ctx.AttendanceRecords.ToList()) ctx.AttendanceRecords.Remove(r);
+            foreach (var g in ctx.AttendanceGroups.ToList()) ctx.AttendanceGroups.Remove(g);
+            foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
+            ctx.SaveChanges();
         });
     }
 

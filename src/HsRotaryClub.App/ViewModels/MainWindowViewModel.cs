@@ -19,13 +19,15 @@ public partial class MainWindowViewModel : ObservableObject
         ClubManagementViewModel clubs,
         MemberViewModel member,
         ClubCollectionViewModel collection,
-        FriendlyClubViewModel friendly)
+        FriendlyClubViewModel friendly,
+        AttendanceViewModel attendance)
     {
         Modules.Add(new NavItem("🏠 首頁",     home,        "01"));
         Modules.Add(new NavItem("🏢 社團管理", clubs,       "02"));
         Modules.Add(new NavItem("👤 社員資料", member,     "03"));
         Modules.Add(new NavItem("💰 會內收款", collection, "04"));
-        Modules.Add(new NavItem("🤝 友社捐款", friendly,   "05"));
+        Modules.Add(new NavItem("?? ?社?款", friendly,   "05"));
+                Modules.Add(new NavItem("?? 例?出?", attendance, "06"));
         Selected = Modules[0];
         CurrentView = Selected.ViewModel;
     }
