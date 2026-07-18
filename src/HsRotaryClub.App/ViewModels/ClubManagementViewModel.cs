@@ -136,4 +136,12 @@ public partial class ClubManagementViewModel : ObservableObject
         var owner = System.Windows.Application.Current?.MainWindow;
         ImportExportDialog.Show(_db, _currentClubCtx.CurrentClubId, _currentClubCtx.CurrentClubName, owner);
     }
+
+    /// <summary>v0.15 — 拉 Migration dialog (從舊版 mdb 遷移)。</summary>
+    [RelayCommand]
+    private void MigrateFromMdb()
+    {
+        var owner = System.Windows.Application.Current?.MainWindow;
+        HsRotaryClub.App.Controls.MigrationDialog.Show(_db, owner);
+    }
 }

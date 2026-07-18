@@ -61,6 +61,8 @@ internal static class Program
         await T48_AccountMonthlyReportFormula();
         await T49_MailJobCreate();
         await T50_MailRecipientStatus();
+        await T51_MigrationMissingFile();
+        await T52_MigrationResultSummary();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1910,6 +1912,48 @@ internal static class Program
             foreach (var m in ctx.Members.ToList()) ctx.Members.Remove(m);
             foreach (var c in ctx.Clubs.ToList()) ctx.Clubs.Remove(c);
             ctx.SaveChanges();
+        });
+    }
+
+    private static async Task T51_MigrationMissingFile()
+    {
+        await Run("T51 MigrationEngine: 缺 mdb 檔 → fail 訊息清楚", () =>
+        {
+            using var ctx = NewCtx(out _);
+            var fakePath = Path.Combine(Path.GetTempPath(), $"nonexistent_{Guid.NewGuid():N}.mdb");
+            var result = MigrationEngine.Migrate(fakePath, ctx);
+            Assert(!result.Success, "missing file should fail");
+            Assert(result.Errors.Count > 0, "should have error");
+            Assert(result.Errors[0].Contains("找不到"), $"error should mention 找不到: {result.Errors[0]}");
+            Assert(result.MembersImported == 0, $"no members imported, got {result.MembersImported}");
+        });
+    }
+
+    private static async Task T52_MigrationResultSummary()
+    {
+        await Run("T52 MigrationResult: Summary 文字包含關鍵資訊", () =>
+        {
+            var result = new MigrationResult
+            {
+                SourcePath = "C:\\fake.mdb",
+                TargetClubId = 1,
+                DryRun = true,
+                SourceTablesFound = new List<string> { "Member", "TS81_MAT1" },
+                MembersRead = 10,
+                MembersImported = 8,
+                MembersSkipped = 2,
+                AttendanceGroupsRead = 5,
+                AttendanceGroupsImported = 4,
+                AttendanceGroupsSkipped = 1,
+                Errors = new List<string>(),
+                Warnings = new List<string> { "test warning" },
+            };
+            Assert(result.Success, "should be success");
+            var s = result.Summary;
+            Assert(s.Contains("dry-run"), $"summary should mention dry-run: {s}");
+            Assert(s.Contains("Members 8 imported"), $"should say Members 8 imported: {s}");
+            Assert(s.Contains("AttendanceGroups 4 imported"), $"should say AttendanceGroups 4 imported: {s}");
+            Assert(s.Contains("Errors 0"), $"should say Errors 0: {s}");
         });
     }
 
