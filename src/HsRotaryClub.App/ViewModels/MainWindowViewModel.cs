@@ -20,7 +20,10 @@ public partial class MainWindowViewModel : ObservableObject
         MemberViewModel member,
         ClubCollectionViewModel collection,
         FriendlyClubViewModel friendly,
-        AttendanceViewModel attendance)
+        AttendanceViewModel attendance,
+        OtherTransactionViewModel otherTxn,
+        AccountingViewModel accounting,
+        MailViewModel mail)
     {
         Modules.Add(new NavItem("🏠 首頁",     home,        "01"));
         Modules.Add(new NavItem("🏢 社團管理", clubs,       "02"));
@@ -28,6 +31,9 @@ public partial class MainWindowViewModel : ObservableObject
         Modules.Add(new NavItem("💰 會內收款", collection, "04"));
         Modules.Add(new NavItem("?? ?社?款", friendly,   "05"));
                 Modules.Add(new NavItem("?? 例?出?", attendance, "06"));
+        Modules.Add(new NavItem("📒 其它收支", otherTxn,   "07"));
+        Modules.Add(new NavItem("📊 會計月報", accounting, "08"));
+        Modules.Add(new NavItem("📧 信件作業", mail,       "09"));
         Selected = Modules[0];
         CurrentView = Selected.ViewModel;
     }

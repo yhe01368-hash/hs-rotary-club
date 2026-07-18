@@ -19,6 +19,15 @@
             <DataTemplate DataType="{x:Type vm:AttendanceViewModel}">
                 <views:AttendancePage/>
             </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:OtherTransactionViewModel}">
+                <views:OtherTransactionPage/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:AccountingViewModel}">
+                <views:AccountingPage/>
+            </DataTemplate>
+            <DataTemplate DataType="{x:Type vm:MailViewModel}">
+                <views:MailPage/>
+            </DataTemplate>
             <DataTemplate DataType="{x:Type vm:HomeViewModel}">
                 <views:HomePage/>
             </DataTemplate>
