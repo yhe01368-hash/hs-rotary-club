@@ -64,6 +64,8 @@ internal static class Program
         await T51_MigrationMissingFile();
         await T52_MigrationResultSummary();
         await T53_DbInitializerRecreate();
+        await T54_XamlBomAndFont();
+        await T55_NavItemChineseTitle();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -1989,6 +1991,47 @@ internal static class Program
                 System.Threading.Thread.Sleep(100);
                 if (File.Exists(path)) File.Delete(path);
             }
+        });
+    }
+
+    private static async Task T54_XamlBomAndFont()
+    {
+        await Run("T54 v0.17: 全 18 個 XAML 都有 UTF-8 BOM + App.xaml 含 AppFontFamily", () =>
+        {
+            var appDir = Path.Combine(ResolveProjectRoot().ToString(), "src", "HsRotaryClub.App");
+            var bom = new byte[] { 0xEF, 0xBB, 0xBF };
+            var xamlFiles = Directory.GetFiles(appDir, "*.xaml", SearchOption.AllDirectories);
+            Assert(xamlFiles.Length >= 15, $"should have >=15 xaml files, got {xamlFiles.Length}");
+            int withBom = 0;
+            foreach (var f in xamlFiles)
+            {
+                var first3 = File.ReadAllBytes(f).Take(3).ToArray();
+                if (first3.SequenceEqual(bom)) withBom++;
+            }
+            Assert(withBom == xamlFiles.Length, $"all XAML should have BOM: {withBom}/{xamlFiles.Length}");
+
+            // App.xaml 應含 AppFontFamily
+            var appXaml = File.ReadAllText(Path.Combine(appDir, "App.xaml"));
+            Assert(appXaml.Contains("AppFontFamily"), "App.xaml should define AppFontFamily");
+            Assert(appXaml.Contains("Microsoft JhengHei"), "AppFontFamily should include Microsoft JhengHei");
+        });
+    }
+
+    private static async Task T55_NavItemChineseTitle()
+    {
+        await Run("T55 v0.17: NavItem.Title 中文 UTF-8 bytes 正確 (codepage 切換不會 garble)", () =>
+        {
+            // 直接 grep MainWindowViewModel.cs 確認中文是 UTF-8 bytes 不是 cp950 garble
+            var cs = Path.Combine(ResolveProjectRoot().ToString(), "src", "HsRotaryClub.App", "ViewModels", "MainWindowViewModel.cs");
+            var raw = File.ReadAllBytes(cs);
+            // "社團管理" in UTF-8 = E7 A4 BE E5 9C 98 E7 AE A1 E7 90 86
+            var expected = new byte[] { 0xE7, 0xA4, 0xBE, 0xE5, 0x9C, 0x98, 0xE7, 0xAE, 0xA1, 0xE7, 0x90, 0x86 };
+            int idx = -1;
+            for (int i = 0; i <= raw.Length - expected.Length; i++)
+            {
+                if (raw[i] == 0xE7 && raw[i+1] == 0xA4 && raw[i+2] == 0xBE && raw[i+3] == 0xE5) { idx = i; break; }
+            }
+            Assert(idx >= 0, "社團管理 UTF-8 bytes not found in MainWindowViewModel.cs (file may be cp950 garbled)");
         });
     }
 

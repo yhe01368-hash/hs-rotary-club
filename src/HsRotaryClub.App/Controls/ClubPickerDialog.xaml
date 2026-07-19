@@ -1,4 +1,4 @@
-<Window x:Class="HsRotaryClub.App.Controls.ClubPickerDialog"
+﻿<Window x:Class="HsRotaryClub.App.Controls.ClubPickerDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="選擇操作社"

@@ -1,12 +1,32 @@
-<Application x:Class="HsRotaryClub.App.App"
+﻿<Application x:Class="HsRotaryClub.App.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:HsRotaryClub.App"
              xmlns:vm="clr-namespace:HsRotaryClub.App.ViewModels"
              xmlns:views="clr-namespace:HsRotaryClub.App.Views"
-             >
+             xml:lang="zh-TW">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- v0.17: global CJK FontFamily fallback chain (繁中 → 日文 → 簡中 → 英文) -->
+            <FontFamily x:Key="AppFontFamily">Microsoft JhengHei, Microsoft YaHei, Meiryo, SimSun, Segoe UI</FontFamily>
+            <Style TargetType="{x:Type Window}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type TextBlock}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type Button}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type TextBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type ComboBox}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
+            <Style TargetType="{x:Type DataGrid}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+            </Style>
             <DataTemplate DataType="{x:Type vm:MemberViewModel}">
                 <views:MemberPage/>
             </DataTemplate>

@@ -1,4 +1,4 @@
-<Window x:Class="HsRotaryClub.App.Controls.MigrationDialog"
+﻿<Window x:Class="HsRotaryClub.App.Controls.MigrationDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="從舊版 mdb 遷移 (VB6 + Jet)"
