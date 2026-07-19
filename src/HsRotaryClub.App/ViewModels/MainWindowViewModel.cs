@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -29,8 +29,8 @@ public partial class MainWindowViewModel : ObservableObject
         Modules.Add(new NavItem("🏢 社團管理", clubs,       "02"));
         Modules.Add(new NavItem("👤 社員資料", member,     "03"));
         Modules.Add(new NavItem("💰 會內收款", collection, "04"));
-        Modules.Add(new NavItem("?? ?社?款", friendly,   "05"));
-                Modules.Add(new NavItem("?? 例?出?", attendance, "06"));
+        Modules.Add(new NavItem("友社捐款", friendly,   "05"));
+        Modules.Add(new NavItem("例會出席", attendance, "06"));
         Modules.Add(new NavItem("📒 其它收支", otherTxn,   "07"));
         Modules.Add(new NavItem("📊 會計月報", accounting, "08"));
         Modules.Add(new NavItem("📧 信件作業", mail,       "09"));
