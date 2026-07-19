@@ -10,7 +10,7 @@
 
         <!-- 工具列 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <TextBlock Text="社團管理" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="社團管理" FontSize="18" FontWeight="Bold" Foreground="#1A4789" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="20,0" VerticalAlignment="Center" Foreground="Gray"/>
 
             <TextBlock Text="當前操作社:" Margin="20,0,4,0" VerticalAlignment="Center" FontWeight="Bold" Foreground="DarkBlue"/>
@@ -39,14 +39,14 @@
             <Border Grid.Column="0" BorderBrush="#CCC" BorderThickness="1">
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Margin="4">
-                        <TextBlock Text="🔍 速查 (社名 / 分區)" FontWeight="Bold"/>
-                        <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Margin="0,4"/>
+                        <TextBlock Text="🔍 速查 (社名 / 分區)" FontWeight="Bold" FontSize="15" Foreground="#1A4789"/>
+                        <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Margin="0,4" FontSize="14"/>
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Clubs}" SelectedItem="{Binding Selected}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="2">
-                                    <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                    <TextBlock Text="{Binding Name}" FontWeight="Bold" FontSize="15" Foreground="#1A4789"/>
                                     <TextBlock Text="{Binding District}" Foreground="Gray" Margin="8,0,0,0"/>
                                 </StackPanel>
                             </DataTemplate>
@@ -73,22 +73,22 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="社名" Grid.Row="0" Grid.Column="0" Margin="2,4" FontWeight="Bold"/>
-                <TextBox   Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Margin="2,4"/>
+                <TextBox   Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="0" Grid.Column="1" Margin="2,4" FontSize="14"/>
 
-                <TextBlock Text="分區" Grid.Row="1" Grid.Column="0" Margin="2,4"/>
-                <TextBox   Text="{Binding District, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Margin="2,4"/>
+                <TextBlock Text="分區" Grid.Row="1" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
+                <TextBox   Text="{Binding District, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Margin="2,4" FontSize="14"/>
 
-                <TextBlock Text="授證日" Grid.Row="2" Grid.Column="0" Margin="2,4"/>
-                <DatePicker SelectedDate="{Binding CharterDate, Mode=TwoWay}" Grid.Row="2" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left"/>
+                <TextBlock Text="授證日" Grid.Row="2" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
+                <DatePicker SelectedDate="{Binding CharterDate, Mode=TwoWay}" Grid.Row="2" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left" FontSize="14"/>
 
-                <TextBlock Text="聯絡人" Grid.Row="3" Grid.Column="0" Margin="2,4"/>
-                <TextBox   Text="{Binding Contact, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="3" Grid.Column="1" Margin="2,4" Width="200" HorizontalAlignment="Left"/>
+                <TextBlock Text="聯絡人" Grid.Row="3" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
+                <TextBox   Text="{Binding Contact, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="3" Grid.Column="1" Margin="2,4" Width="200" HorizontalAlignment="Left" FontSize="14"/>
 
-                <TextBlock Text="Email" Grid.Row="4" Grid.Column="0" Margin="2,4"/>
-                <TextBox   Text="{Binding ContactEmail, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="4" Grid.Column="1" Margin="2,4" Width="280" HorizontalAlignment="Left"/>
+                <TextBlock Text="Email" Grid.Row="4" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
+                <TextBox   Text="{Binding ContactEmail, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="4" Grid.Column="1" Margin="2,4" Width="280" HorizontalAlignment="Left" FontSize="14"/>
 
                 <TextBlock Text="備註" Grid.Row="5" Grid.Column="0" Margin="2,4" VerticalAlignment="Top"/>
-                <TextBox   Text="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="5" Grid.Column="1" Margin="2,4" AcceptsReturn="True" Height="80" TextWrapping="Wrap"/>
+                <TextBox   Text="{Binding Remarks, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="5" Grid.Column="1" Margin="2,4" AcceptsReturn="True" Height="80" TextWrapping="Wrap" FontSize="14"/>
 
                 <CheckBox Content="啟用"
                           IsChecked="{Binding IsActive, Mode=TwoWay}"

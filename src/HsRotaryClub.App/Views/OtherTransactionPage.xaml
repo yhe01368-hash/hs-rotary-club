@@ -10,14 +10,14 @@
 
         <!-- 工具列 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <TextBlock Text="其它收支管理" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="其它收支管理" FontSize="18" FontWeight="Bold" Foreground="#1A4789" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="20,0" VerticalAlignment="Center" Foreground="Gray"/>
 
             <TextBlock Text="年度:" Margin="20,0,4,0" VerticalAlignment="Center" FontWeight="Bold"/>
-            <TextBox Text="{Binding Year}" Width="60" Margin="0,0,8,0"/>
+            <TextBox Text="{Binding Year}" Width="60" Margin="0,0,8,0" FontSize="14"/>
 
             <TextBlock Text="月份:" Margin="0,0,4,0" VerticalAlignment="Center" FontWeight="Bold"/>
-            <TextBox Text="{Binding Month}" Width="40" Margin="0,0,8,0"/>
+            <TextBox Text="{Binding Month}" Width="40" Margin="0,0,8,0" FontSize="14"/>
 
             <Button Content="重新載入" Command="{Binding ReloadCommand}" Padding="8,4" Margin="4,0"/>
             <Button Content="新增收入" Command="{Binding AddIncomeCommand}" Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
@@ -42,12 +42,12 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="日期" Binding="{Binding TxDate, StringFormat=yyyy-MM-dd}" Width="100"/>
-                        <DataGridTextColumn Header="單據" Binding="{Binding VoucherNo}" Width="80"/>
-                        <DataGridTextColumn Header="對象" Binding="{Binding Subject}" Width="100"/>
-                        <DataGridTextColumn Header="說明" Binding="{Binding Description}" Width="*"/>
-                        <DataGridTextColumn Header="類別" Binding="{Binding Category}" Width="80"/>
-                        <DataGridTextColumn Header="金額" Binding="{Binding Amount}" Width="80"/>
+                        <DataGridTextColumn Header="日期" Binding="{Binding TxDate, StringFormat=yyyy-MM-dd}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="單據" Binding="{Binding VoucherNo}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="對象" Binding="{Binding Subject}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="說明" Binding="{Binding Description}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="類別" Binding="{Binding Category}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="金額" Binding="{Binding Amount}" Width="80" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
@@ -60,13 +60,13 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="False"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="日期" Binding="{Binding TxDate, StringFormat=yyyy-MM-dd}" Width="100"/>
-                        <DataGridTextColumn Header="單據" Binding="{Binding VoucherNo}" Width="80"/>
-                        <DataGridTextColumn Header="對象" Binding="{Binding Subject}" Width="100"/>
-                        <DataGridTextColumn Header="說明" Binding="{Binding Description}" Width="*"/>
-                        <DataGridTextColumn Header="貸方科目" Binding="{Binding CreditAccount}" Width="80"/>
-                        <DataGridTextColumn Header="類別" Binding="{Binding Category}" Width="80"/>
-                        <DataGridTextColumn Header="金額" Binding="{Binding Amount}" Width="80"/>
+                        <DataGridTextColumn Header="日期" Binding="{Binding TxDate, StringFormat=yyyy-MM-dd}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="單據" Binding="{Binding VoucherNo}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="對象" Binding="{Binding Subject}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="說明" Binding="{Binding Description}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="貸方科目" Binding="{Binding CreditAccount}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="類別" Binding="{Binding Category}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="金額" Binding="{Binding Amount}" Width="80" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
@@ -80,7 +80,7 @@
                 <TextBlock Text="本月總支出: " Foreground="Gray"/>
                 <TextBlock Text="{Binding TotalExpense, StringFormat=N0}" FontWeight="Bold" Foreground="DarkRed" Margin="0,0,20,0"/>
                 <TextBlock Text="淨額: " Foreground="Gray"/>
-                <TextBlock Text="{Binding NetAmount, StringFormat=N0}" FontWeight="Bold" Margin="0,0,20,0"/>
+                <TextBlock Text="{Binding NetAmount, StringFormat=N0}" FontWeight="Bold" FontSize="15" Foreground="#1A4789" Margin="0,0,20,0"/>
                 <TextBlock Text="{Binding StatusMessage}" Foreground="DarkGreen"/>
             </StackPanel>
         </Border>

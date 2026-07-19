@@ -10,12 +10,12 @@
 
         <!-- 工具列 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <TextBlock Text="社友例會出席管理" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="社友例會出席管理" FontSize="18" FontWeight="Bold" Foreground="#1A4789" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="20,0" VerticalAlignment="Center" Foreground="Gray"/>
 
             <TextBlock Text="年度:" Margin="20,0,4,0" VerticalAlignment="Center" FontWeight="Bold"/>
             <ComboBox x:Name="YearCombo" Width="80" Margin="0,0,8,0"
-                      ItemsSource="{Binding Years}" SelectedItem="{Binding Year}"/>
+                      ItemsSource="{Binding Years}" SelectedItem="{Binding Year}" FontSize="14"/>
 
             <Button Content="重新載入"  Command="{Binding ReloadCommand}"       Padding="8,4" Margin="4,0"/>
             <Button Content="新增組別" Command="{Binding AddGroupCommand}"     Padding="8,4" Margin="4,0"/>
@@ -49,14 +49,14 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column"
                           IsReadOnly="False" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="組別" Binding="{Binding GroupName}" Width="80"/>
-                        <DataGridTextColumn Header="組長編號" Binding="{Binding GroupLeaderCode}" Width="80"/>
-                        <DataGridTextColumn Header="組長姓名" Binding="{Binding GroupLeaderName}" Width="100"/>
-                        <DataGridTextColumn Header="組員編號" Binding="{Binding GroupMemberCode}" Width="80"/>
-                        <DataGridTextColumn Header="組員姓名" Binding="{Binding GroupMemberName}" Width="100"/>
-                        <DataGridTextColumn Header="應出席" Binding="{Binding ShouldAttend}" Width="60"/>
-                        <DataGridTextColumn Header="實出席" Binding="{Binding ActualAttend}" Width="60"/>
-                        <DataGridTextColumn Header="補出席" Binding="{Binding MakeupAttend}" Width="60"/>
+                        <DataGridTextColumn Header="組別" Binding="{Binding GroupName}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="組長編號" Binding="{Binding GroupLeaderCode}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="組長姓名" Binding="{Binding GroupLeaderName}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="組員編號" Binding="{Binding GroupMemberCode}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="組員姓名" Binding="{Binding GroupMemberName}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="應出席" Binding="{Binding ShouldAttend}" Width="60" FontSize="14"/>
+                        <DataGridTextColumn Header="實出席" Binding="{Binding ActualAttend}" Width="60" FontSize="14"/>
+                        <DataGridTextColumn Header="補出席" Binding="{Binding MakeupAttend}" Width="60" FontSize="14"/>
                         <DataGridCheckBoxColumn Header="啟用" Binding="{Binding IsActive}" Width="50"/>
                     </DataGrid.Columns>
                 </DataGrid>
@@ -76,12 +76,12 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column"
                           IsReadOnly="True" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="例會日期" Binding="{Binding MeetingDate, StringFormat=yyyy-MM-dd}" Width="120"/>
-                        <DataGridTextColumn Header="社員編號" Binding="{Binding MemberCode}" Width="80"/>
-                        <DataGridTextColumn Header="社員姓名" Binding="{Binding MemberName}" Width="120"/>
-                        <DataGridTextColumn Header="出席類型" Binding="{Binding Type}" Width="100"/>
-                        <DataGridTextColumn Header="補出席日期" Binding="{Binding MakeupDate, StringFormat=yyyy-MM-dd}" Width="120"/>
-                        <DataGridTextColumn Header="備註" Binding="{Binding Remarks}" Width="*"/>
+                        <DataGridTextColumn Header="例會日期" Binding="{Binding MeetingDate, StringFormat=yyyy-MM-dd}" Width="120" FontSize="14"/>
+                        <DataGridTextColumn Header="社員編號" Binding="{Binding MemberCode}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="社員姓名" Binding="{Binding MemberName}" Width="120" FontSize="14"/>
+                        <DataGridTextColumn Header="出席類型" Binding="{Binding Type}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="補出席日期" Binding="{Binding MakeupDate, StringFormat=yyyy-MM-dd}" Width="120" FontSize="14"/>
+                        <DataGridTextColumn Header="備註" Binding="{Binding Remarks}" Width="*" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>

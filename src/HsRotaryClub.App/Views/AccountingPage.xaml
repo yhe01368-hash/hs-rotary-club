@@ -10,14 +10,14 @@
 
         <!-- 工具列 -->
         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <TextBlock Text="會計月報表" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="會計月報表" FontSize="18" FontWeight="Bold" Foreground="#1A4789" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="20,0" VerticalAlignment="Center" Foreground="Gray"/>
 
             <TextBlock Text="年度:" Margin="20,0,4,0" VerticalAlignment="Center" FontWeight="Bold"/>
-            <TextBox Text="{Binding Year}" Width="60" Margin="0,0,8,0"/>
+            <TextBox Text="{Binding Year}" Width="60" Margin="0,0,8,0" FontSize="14"/>
 
             <TextBlock Text="月份:" Margin="0,0,4,0" VerticalAlignment="Center" FontWeight="Bold"/>
-            <TextBox Text="{Binding Month}" Width="40" Margin="0,0,8,0"/>
+            <TextBox Text="{Binding Month}" Width="40" Margin="0,0,8,0" FontSize="14"/>
 
             <Button Content="重新載入" Command="{Binding ReloadCommand}" Padding="8,4" Margin="4,0"/>
             <Button Content="新增科目" Command="{Binding AddSubjectCommand}" Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
@@ -37,12 +37,12 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="科目代號" Binding="{Binding Code}" Width="80"/>
-                        <DataGridTextColumn Header="科目名稱" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="本月收入" Binding="{Binding ThisMonth, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="累計收入" Binding="{Binding Ytd, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="預算收入" Binding="{Binding AnnualBudget, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="執行率" Binding="{Binding ExecutionRateText}" Width="80"/>
+                        <DataGridTextColumn Header="科目代號" Binding="{Binding Code}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="科目名稱" Binding="{Binding Name}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="本月收入" Binding="{Binding ThisMonth, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="累計收入" Binding="{Binding Ytd, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="預算收入" Binding="{Binding AnnualBudget, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="執行率" Binding="{Binding ExecutionRateText}" Width="80" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>
@@ -55,12 +55,12 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="科目代號" Binding="{Binding Code}" Width="80"/>
-                        <DataGridTextColumn Header="科目名稱" Binding="{Binding Name}" Width="*"/>
-                        <DataGridTextColumn Header="本月支出" Binding="{Binding ThisMonth, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="累計支出" Binding="{Binding Ytd, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="預算支出" Binding="{Binding AnnualBudget, StringFormat=N0}" Width="100"/>
-                        <DataGridTextColumn Header="執行率" Binding="{Binding ExecutionRateText}" Width="80"/>
+                        <DataGridTextColumn Header="科目代號" Binding="{Binding Code}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="科目名稱" Binding="{Binding Name}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="本月支出" Binding="{Binding ThisMonth, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="累計支出" Binding="{Binding Ytd, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="預算支出" Binding="{Binding AnnualBudget, StringFormat=N0}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="執行率" Binding="{Binding ExecutionRateText}" Width="80" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>

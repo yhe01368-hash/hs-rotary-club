@@ -9,7 +9,7 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <TextBlock Text="信件作業" FontSize="18" FontWeight="Bold" VerticalAlignment="Center"/>
+            <TextBlock Text="信件作業" FontSize="18" FontWeight="Bold" Foreground="#1A4789" VerticalAlignment="Center"/>
             <TextBlock Text="{Binding StatusMessage}" Margin="20,0" VerticalAlignment="Center" Foreground="Gray"/>
 
             <Button Content="新增信件" Command="{Binding AddJobCommand}" Padding="8,4" Margin="20,0,4,0" Background="#A0C4FF"/>
@@ -37,10 +37,10 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="主旨" Binding="{Binding Subject}" Width="*"/>
-                        <DataGridTextColumn Header="排程" Binding="{Binding ScheduleType}" Width="80"/>
-                        <DataGridTextColumn Header="建立時間" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
-                        <DataGridTextColumn Header="上次寄送" Binding="{Binding LastSentAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
+                        <DataGridTextColumn Header="主旨" Binding="{Binding Subject}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="排程" Binding="{Binding ScheduleType}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="建立時間" Binding="{Binding CreatedAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140" FontSize="14"/>
+                        <DataGridTextColumn Header="上次寄送" Binding="{Binding LastSentAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
@@ -60,12 +60,12 @@
                           AutoGenerateColumns="False" CanUserAddRows="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="社員編號" Binding="{Binding MemberCode}" Width="80"/>
-                        <DataGridTextColumn Header="社員姓名" Binding="{Binding MemberName}" Width="100"/>
-                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*"/>
-                        <DataGridTextColumn Header="狀態" Binding="{Binding Status}" Width="100"/>
-                        <DataGridTextColumn Header="錯誤訊息" Binding="{Binding ErrorMessage}" Width="200"/>
-                        <DataGridTextColumn Header="寄送時間" Binding="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140"/>
+                        <DataGridTextColumn Header="社員編號" Binding="{Binding MemberCode}" Width="80" FontSize="14"/>
+                        <DataGridTextColumn Header="社員姓名" Binding="{Binding MemberName}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="Email" Binding="{Binding Email}" Width="*" FontSize="14"/>
+                        <DataGridTextColumn Header="狀態" Binding="{Binding Status}" Width="100" FontSize="14"/>
+                        <DataGridTextColumn Header="錯誤訊息" Binding="{Binding ErrorMessage}" Width="200" FontSize="14"/>
+                        <DataGridTextColumn Header="寄送時間" Binding="{Binding SentAt, StringFormat=yyyy-MM-dd HH:mm}" Width="140" FontSize="14"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </Grid>
