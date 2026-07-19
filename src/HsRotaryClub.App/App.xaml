@@ -11,21 +11,45 @@
             <FontFamily x:Key="AppFontFamily">Microsoft JhengHei, Microsoft YaHei, Meiryo, SimSun, Segoe UI</FontFamily>
             <Style TargetType="{x:Type Window}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
             </Style>
             <Style TargetType="{x:Type TextBlock}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
             </Style>
             <Style TargetType="{x:Type Button}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
             </Style>
             <Style TargetType="{x:Type TextBox}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
             </Style>
             <Style TargetType="{x:Type ComboBox}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
             </Style>
             <Style TargetType="{x:Type DataGrid}">
                 <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
+            <Style TargetType="{x:Type DatePicker}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
+            <Style TargetType="{x:Type Menu}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
+            <Style TargetType="{x:Type MenuItem}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
+            </Style>
+            <Style TargetType="{x:Type DataGridColumnHeader}">
+                <Setter Property="FontFamily" Value="{StaticResource AppFontFamily}"/>
+                <Setter Property="FontSize" Value="14"/>
+                <Setter Property="FontWeight" Value="Bold"/>
+                <Setter Property="Background" Value="#E8F0F8"/>
             </Style>
             <DataTemplate DataType="{x:Type vm:MemberViewModel}">
                 <views:MemberPage/>

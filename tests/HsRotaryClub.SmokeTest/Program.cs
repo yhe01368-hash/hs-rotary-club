@@ -66,6 +66,7 @@ internal static class Program
         await T53_DbInitializerRecreate();
         await T54_XamlBomAndFont();
         await T55_NavItemChineseTitle();
+        await T56_AppXamlGlobalFontSize();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -2032,6 +2033,23 @@ internal static class Program
                 if (raw[i] == 0xE7 && raw[i+1] == 0xA4 && raw[i+2] == 0xBE && raw[i+3] == 0xE5) { idx = i; break; }
             }
             Assert(idx >= 0, "社團管理 UTF-8 bytes not found in MainWindowViewModel.cs (file may be cp950 garbled)");
+        });
+    }
+
+    private static async Task T56_AppXamlGlobalFontSize()
+    {
+        await Run("T56 v0.21: App.xaml global FontSize=14 + 8 style types 含 Menu/DatePicker", () =>
+        {
+            var appXaml = Path.Combine(ResolveProjectRoot().ToString(), "src", "HsRotaryClub.App", "App.xaml");
+            var text = File.ReadAllText(appXaml, System.Text.Encoding.UTF8);
+            // Check key style types
+            foreach (var t in new[] { "Window", "TextBlock", "Button", "TextBox", "ComboBox", "DataGrid", "DatePicker", "Menu", "MenuItem", "DataGridColumnHeader" })
+            {
+                Assert(text.Contains($"TargetType=\"{{x:Type {t}}}\""), $"App.xaml missing style for {t}");
+            }
+            // Check FontSize=14 appear >= 8 times (one per style)
+            int fs14 = System.Text.RegularExpressions.Regex.Matches(text, @"<Setter\s+Property=""FontSize""\s+Value=""14""").Count;
+            Assert(fs14 >= 8, $"should have >=8 FontSize=14 setters, got {fs14}");
         });
     }
 
