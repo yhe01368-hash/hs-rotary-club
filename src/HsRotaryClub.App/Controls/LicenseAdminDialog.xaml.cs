@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using HsRotaryClub.Infrastructure;
 
@@ -83,7 +83,12 @@ public partial class LicenseAdminDialog : Window
     public static void Show(Window? owner = null)
     {
         var dlg = new LicenseAdminDialog();
-        if (owner is not null) dlg.Owner = owner;
+        // v0.30: Owner 設前先檢查,Window 可能已被 close,避免 InvalidOperationException
+            if (owner is not null)
+            {
+                try { dlg.Owner = owner; }
+                catch (InvalidOperationException) { /* owner disposed */ }
+            }
         dlg.ShowDialog();
     }
 }

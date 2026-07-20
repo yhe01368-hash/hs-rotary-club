@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -186,7 +186,12 @@ public partial class ImportExportDialog : Window
     public static void Show(RotaryDbContext db, int currentClubId, string currentClubName, Window? owner = null)
     {
         var dlg = new ImportExportDialog(db, currentClubId, currentClubName);
-        if (owner is not null) dlg.Owner = owner;
+        // v0.30: Owner 設前先檢查,Window 可能已被 close,避免 InvalidOperationException
+            if (owner is not null)
+            {
+                try { dlg.Owner = owner; }
+                catch (InvalidOperationException) { /* owner disposed */ }
+            }
         dlg.ShowDialog();
     }
 }

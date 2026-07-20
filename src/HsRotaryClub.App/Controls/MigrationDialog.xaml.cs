@@ -1,4 +1,4 @@
-using System.IO;
+﻿using System.IO;
 using System.Windows;
 using HsRotaryClub.Infrastructure;
 using Microsoft.Win32;
@@ -77,7 +77,12 @@ public partial class MigrationDialog : Window
     public static void Show(RotaryDbContext db, Window? owner = null)
     {
         var dlg = new MigrationDialog(db);
-        if (owner is not null) dlg.Owner = owner;
+        // v0.30: Owner 設前先檢查,Window 可能已被 close,避免 InvalidOperationException
+            if (owner is not null)
+            {
+                try { dlg.Owner = owner; }
+                catch (InvalidOperationException) { /* owner disposed */ }
+            }
         dlg.ShowDialog();
     }
 }

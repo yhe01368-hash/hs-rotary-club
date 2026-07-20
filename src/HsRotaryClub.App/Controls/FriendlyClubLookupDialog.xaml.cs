@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Input;
 using HsRotaryClub.App.Views;
@@ -67,7 +67,12 @@ public partial class FriendlyClubLookupDialog : Window
             owner = App.Services?.GetService(typeof(MainWindow)) as Window
                     ?? Application.Current?.MainWindow;
         }
-        if (owner is not null) dlg.Owner = owner;
+        // v0.30: Owner 設前先檢查,Window 可能已被 close,避免 InvalidOperationException
+            if (owner is not null)
+            {
+                try { dlg.Owner = owner; }
+                catch (InvalidOperationException) { /* owner disposed */ }
+            }
         return dlg.ShowDialog() == true ? dlg.SelectedClub : null;
     }
 }
