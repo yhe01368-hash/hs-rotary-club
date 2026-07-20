@@ -134,8 +134,15 @@ public partial class ClubCollectionViewModel : ObservableObject
     {
         var picked = MemberLookupDialog.Ask();
         if (picked is null || Selected is null) return;
-        Selected.MemberCode = picked.Code;
-        Selected.MemberName = picked.Name;
+        // v0.31: 對 Selected 重新 set 一次觸發 INPC,確保欄位 binding 重新讀取.
+        // sub-property 寫入 (Selected.MemberCode = ...) 不會自動 fire INPC,
+        // 因為 Selected reference 沒變,所以右側欄位 + grid row 都不 refresh.
+        // 用 local 暫存 → set null → 改 sub property → restore 強制 INPC.
+        var orig = Selected;
+        Selected = null;
+        orig.MemberCode = picked.Code;
+        orig.MemberName = picked.Name;
+        Selected = orig;
         StatusMessage = $"已綁社員: {picked.Code} {picked.Name}";
     }
 
