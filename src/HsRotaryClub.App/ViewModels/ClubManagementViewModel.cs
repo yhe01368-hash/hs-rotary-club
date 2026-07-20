@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using HsRotaryClub.App.Controls;
@@ -53,6 +53,19 @@ public partial class ClubManagementViewModel : ObservableObject
     [RelayCommand]
     private void Reload()
     {
+        try
+        {
+            DoReload();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Reload 失敗: {ex.Message}";
+            System.Diagnostics.Debug.WriteLine($"[ClubMgmt.Reload] {ex}");
+        }
+    }
+
+    private void DoReload()
+    {
         Clubs.Clear();
         var q = _db.Clubs.AsNoTracking().AsQueryable();
         q = ShowInactiveOnly ? q.Where(c => !c.IsActive) : q.Where(c => c.IsActive);
@@ -63,7 +76,6 @@ public partial class ClubManagementViewModel : ObservableObject
         foreach (var c in q.OrderBy(c => c.Name).ToList())
             Clubs.Add(c);
         Selected ??= Clubs.FirstOrDefault(c => c.Id == _currentClubCtx.CurrentClubId) ?? Clubs.FirstOrDefault();
-        // XAML bind CurrentClubName — 從 _currentClubCtx 拉出
         CurrentClubName = _currentClubCtx.CurrentClubName;
         StatusMessage = $"載入 {Clubs.Count} 個社團";
     }
