@@ -14,9 +14,18 @@ public partial class MainWindow : Window
 
     private void OnNavClick(object sender, RoutedEventArgs e)
     {
-        if (sender is Button b && b.Tag is NavItem item && DataContext is MainWindowViewModel vm)
+        try
         {
-            vm.SelectCommand.Execute(item);
+            if (sender is Button b && b.Tag is NavItem item && DataContext is MainWindowViewModel vm)
+            {
+                vm.SelectCommand.Execute(item);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OnNavClick] {ex}");
+            MessageBox.Show($"切換頁面失敗: {ex.Message}", "錯誤",
+                MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 }
