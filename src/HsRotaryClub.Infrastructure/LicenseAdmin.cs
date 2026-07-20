@@ -16,7 +16,7 @@ namespace HsRotaryClub.Infrastructure;
 /// - 啟動後 7 天內有效,之後 Status 變 Expired (即使沒 license.dat)
 ///
 /// LicenseAdmin 用法 (在開發者機器執行):
-///   LicenseAdmin.IssueToMachine("豐原西南扶輪社", daysValid: 365, maxClubs: 5)
+///   LicenseAdmin.IssueToMachine("示範扶輪社", daysValid: 365, maxClubs: 5)
 ///   → 寫 license.dat + 印 MachineId
 /// </summary>
 public static class LicenseAdmin

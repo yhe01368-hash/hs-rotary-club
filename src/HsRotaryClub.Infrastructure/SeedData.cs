@@ -4,7 +4,7 @@ namespace HsRotaryClub.Infrastructure;
 
 /// <summary>
 /// 開發/測試用的試算 seed。
-/// v0.7 開始每個 demo 資料帶 ClubId FK — 第一個 Club 「豐原西南扶輪社」當預設社。
+/// v0.7 開始每個 demo 資料帶 ClubId FK — 第一個 Club 「示範扶輪社」當預設社。
 /// </summary>
 public static class SeedData
 {
@@ -12,7 +12,7 @@ public static class SeedData
     {
         new()
         {
-            Name = "豐原西南扶輪社",
+            Name = "示範扶輪社",
             District = "3460 地區",
             CharterDate = new(2006, 6, 1),
             Contact = "秘書處",
@@ -38,7 +38,7 @@ public static class SeedData
     };
 
     /// <summary>
-    /// 預設社 ID = 1 (豐原西南扶輪社)。所有 demo Member/FriendlyClub/ClubCollection
+    /// 預設社 ID = 1 (示範扶輪社)。所有 demo Member/FriendlyClub/ClubCollection
     /// 之後在 v0.7 進階 commit 加 ClubId = DefaultClubId 過濾。
     /// </summary>
     public const int DefaultClubId = 1;

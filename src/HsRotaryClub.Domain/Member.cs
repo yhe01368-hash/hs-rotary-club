@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace HsRotaryClub.Domain;
 
 /// <summary>
-/// v0.7 — 各 entity 歸屬某個 Club (ClubId FK)。預設值 = 1 (預設社「豐原西南扶輪社」)
+/// v0.7 — 各 entity 歸屬某個 Club (ClubId FK)。預設值 = 1 (預設社「示範扶輪社」)
 /// 由 SeedData 在 db migrate 後寫入 id=1。
 /// </summary>
 public static class ClubDefaults

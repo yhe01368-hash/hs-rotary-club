@@ -9,7 +9,7 @@ using Microsoft.EntityFrameworkCore;
 namespace HsRotaryClub.App.ViewModels;
 
 /// <summary>
-/// v0.13 — M6 會計月報表 (對應舊版 「(1)豐原西南扶輪社 XXXX年度 - XXXX年X月份會計月報表」)。
+/// v0.13 — M6 會計月報表 (對應舊版 「(1)示範扶輪社 XXXX年度 - XXXX年X月份會計月報表」)。
 /// 左: 收入科目 (本月收入/累計收入/預算/執行率)
 /// 右: 支出科目 (本月支出/累計支出/預算/執行率)
 /// </summary>

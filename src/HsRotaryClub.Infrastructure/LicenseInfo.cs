@@ -27,7 +27,7 @@ public sealed class LicenseInfo
     [JsonPropertyName("version")]
     public int Version { get; set; } = 1;
 
-    /// <summary>發行給誰 — 例如「豐原西南扶輪社」</summary>
+    /// <summary>發行給誰 — 例如「示範扶輪社」</summary>
     [JsonPropertyName("issuedTo")]
     public string IssuedTo { get; set; } = "";
 

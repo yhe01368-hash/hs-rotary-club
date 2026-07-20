@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 namespace HsRotaryClub.Domain;
 
 /// <summary>
-/// 扶輪社資料。每一個「社」(例:豐原西南、台中西北)是一個 Club entity。
+/// 扶輪社資料。每一個「社」(例:示範扶輪社、台中西北)是一個 Club entity。
 /// 所有 Member / ClubCollection / FriendlyClub / MonthlyReceivableSpec 都掛 ClubId FK。
 /// v0.7 開始支援多社共存於同一個 SQLite db。
 /// </summary>

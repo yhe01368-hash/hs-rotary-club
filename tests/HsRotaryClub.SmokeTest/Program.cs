@@ -68,6 +68,7 @@ internal static class Program
         await T55_NavItemChineseTitle();
         await T56_AppXamlGlobalFontSize();
         await T57_WpfPageCtorScanned();
+        await T58_NoFengyuanWestText();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -97,6 +98,42 @@ internal static class Program
             }
             Console.WriteLine($"  total Page ctors: {totalCtors}, with DI params: {diCtorCount}");
             Assert(diCtorCount == 0, $"expected 0 DI ctors in *Page.xaml.cs (got {diCtorCount}). WPF DataTemplate needs no-arg ctor.");
+        });
+    }
+
+    private static async Task T58_NoFengyuanWestText()
+    {
+        await Run("T58 v0.28: 整個 source 沒有 豐原西南 字眼 (支援不同扶輪社)", () =>
+        {
+            var srcDir = Path.Combine(ResolveProjectRoot().ToString(), "src");
+            int totalHits = 0;
+            var hits = new List<string>();
+            foreach (var ext in new[] { "*.xaml", "*.cs", "*.iss", "*.issxaml" })
+            {
+                foreach (var f in Directory.GetFiles(srcDir, ext, SearchOption.AllDirectories))
+                {
+                    if (f.Contains("Licenses")) continue; // skip license.*.txt
+                    var text = File.ReadAllText(f, System.Text.Encoding.UTF8);
+                    if (text.Contains("豐原西南"))
+                    {
+                        totalHits++;
+                        hits.Add(Path.GetFileName(f));
+                    }
+                }
+            }
+            // Also check installer
+            var iss = Path.Combine(ResolveProjectRoot().ToString(), "installer", "HsRotaryClub.iss");
+            if (File.Exists(iss))
+            {
+                var text = File.ReadAllText(iss, System.Text.Encoding.UTF8);
+                if (text.Contains("豐原西南"))
+                {
+                    totalHits++;
+                    hits.Add("HsRotaryClub.iss");
+                }
+            }
+            Console.WriteLine($"  hits: {hits.Count} -> {hits}");
+            Assert(totalHits == 0, $"found 豐原西南 in {totalHits} files: {string.Join(", ", hits)}");
         });
     }
 

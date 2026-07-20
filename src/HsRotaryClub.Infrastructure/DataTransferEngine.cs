@@ -8,7 +8,7 @@ namespace HsRotaryClub.Infrastructure;
 
 /// <summary>
 /// v0.8 — 跨機資料 dump (Export → JSON) 跟 restore (Import ← JSON)。
-/// 場景: A 社的「豐原西南」資料 dump 給 B 機器用,merge 到 B 機器的本機 db。
+/// 場景: A 社的「示範扶輪社」資料 dump 給 B 機器用,merge 到 B 機器的本機 db。
 ///
 /// 設計:
 /// - 純 managed,沒有 WPF / Win32 依賴,smoke test 可直接測
