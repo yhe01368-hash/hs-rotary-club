@@ -42,13 +42,14 @@ LanguageCodePage=950
 
 [Messages]
 ; 中文自訂訊息 (Default.isl 沒有繁中 .isl)
-; 注意:這些是 Default.isl 內建的 CustomMessage key 名稱
-WelcomeLabel2=本安裝程式會安裝 [name/ver] 到您的電腦。%n%n請按「下一步」繼續。
-FinishedLabel=安裝程式已經將 [name] 安裝到您的電腦。應用程式可以透過已建立的捷徑啟動。
-FinishedHeadingLabel=完成安裝 [name]
+; v0.27: 用 %1 取代 [name] (SetupWindowTitle 用 Inno 內建 placeholder)
+; 其他訊息硬寫 HsRotaryClub 避免 [name] 字面殘留
+WelcomeLabel2=本安裝程式會安裝 HsRotaryClub 0.6.0 到您的電腦。%n%n請按「下一步」繼續。
+FinishedLabel=安裝程式已經將 HsRotaryClub 安裝到您的電腦。應用程式可以透過已建立的捷徑啟動。
+FinishedHeadingLabel=完成安裝 HsRotaryClub
 ClickFinish=按「完成」結束安裝。
-SetupWindowTitle=安裝 - [name] 社務行政系統
-UninstallAppTitle=解除安裝 - [name]
+SetupWindowTitle=安裝 - %1 社務行政系統
+UninstallAppTitle=解除安裝 - HsRotaryClub
 
 [Files]
 Source: "{#PublishDir}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
@@ -61,7 +62,7 @@ Name: "{group}\{#MyAppShortName}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\Uninstall HsRotaryClub"; Filename: "{uninstallexe}"
 
 [Run]
-Filename: "{app}\{#MyAppExeName}"; Description: "啟動 [name] 社務行政系統"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\{#MyAppExeName}"; Description: "啟動 HsRotaryClub 社務行政系統"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\Data"
