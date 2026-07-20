@@ -3,20 +3,20 @@ using System.Windows.Controls;
 using HsRotaryClub.App.Infrastructure;
 using HsRotaryClub.Infrastructure;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace HsRotaryClub.App.Views;
 
 public partial class ClubManagementPage : UserControl
 {
-    private readonly CurrentClubContext _currentClubCtx;
-    private readonly RotaryDbContext _db;
+    // WPF DataTemplate 預設 new XxxPage() — 無參 ctor. 所以 DI 服務從 App.Services 拿.
+    private CurrentClubContext CurrentClubCtx =>
+        App.Services.GetRequiredService<CurrentClubContext>();
 
-    public ClubManagementPage(RotaryDbContext db, CurrentClubContext currentClubCtx)
+    public ClubManagementPage()
     {
         InitializeComponent();
-        _db = db;
-        _currentClubCtx = currentClubCtx;
-        // 不設 DataContext,保留外部 MainWindow 傳進來的 VM
+        // DataContext 由外部 (MainWindow 透過 DataTemplate) 帶入,不設 DataContext.
     }
 
     private void OpenImportExport_Click(object sender, RoutedEventArgs e)
@@ -24,10 +24,12 @@ public partial class ClubManagementPage : UserControl
         try
         {
             var owner = Window.GetWindow(this);
+            // ImportExportDialog.Show 從 DI 拿 db 即可,不需要這裡注入.
+            var db = App.Services.GetRequiredService<RotaryDbContext>();
             HsRotaryClub.App.Controls.ImportExportDialog.Show(
-                _db,
-                _currentClubCtx.CurrentClubId,
-                _currentClubCtx.CurrentClubName,
+                db,
+                CurrentClubCtx.CurrentClubId,
+                CurrentClubCtx.CurrentClubName,
                 owner);
         }
         catch (Exception ex)

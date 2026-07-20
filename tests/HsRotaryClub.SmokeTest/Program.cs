@@ -67,10 +67,37 @@ internal static class Program
         await T54_XamlBomAndFont();
         await T55_NavItemChineseTitle();
         await T56_AppXamlGlobalFontSize();
+        await T57_WpfPageCtorScanned();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T57_WpfPageCtorScanned()
+    {
+        await Run("T57 v0.25: WPF View/*Page.xaml.cs 都有無參 ctor (DataTemplate new XxxPage() 才行)", () =>
+        {
+            // 只檢查 Views/ 裡的 *Page.xaml.cs — Dialog 用 static Show() factory 可以有 DI ctor.
+            var viewsDir = Path.Combine(ResolveProjectRoot().ToString(), "src", "HsRotaryClub.App", "Views");
+            int diCtorCount = 0;
+            int totalCtors = 0;
+            foreach (var xamlCs in Directory.GetFiles(viewsDir, "*Page.xaml.cs"))
+            {
+                var text = File.ReadAllText(xamlCs, System.Text.Encoding.UTF8);
+                var matches = System.Text.RegularExpressions.Regex.Matches(text, @"public\s+(\w+)\s*\(([^)]*)\)");
+                foreach (System.Text.RegularExpressions.Match m in matches)
+                {
+                    var parms = m.Groups[2].Value;
+                    totalCtors++;
+                    if (string.IsNullOrWhiteSpace(parms)) continue;
+                    diCtorCount++;
+                    Console.WriteLine($"  [DI ctor] {Path.GetFileName(xamlCs)}: {m.Groups[1].Value}({parms})");
+                }
+            }
+            Console.WriteLine($"  total Page ctors: {totalCtors}, with DI params: {diCtorCount}");
+            Assert(diCtorCount == 0, $"expected 0 DI ctors in *Page.xaml.cs (got {diCtorCount}). WPF DataTemplate needs no-arg ctor.");
+        });
     }
 
     private static async Task T01_CanConnect()
