@@ -74,6 +74,33 @@ public sealed class DbInitializer
         }
 
         // 存在且 schema OK → 跳過 EnsureCreated
+        // v0.32: 檢查舊 v0.28 db 是否有 Clubs.Name UNIQUE index — 有的話 drop (v0.32 起不同社可同名)
+        DropLegacyUniqueConstraints(dbPath);
+    }
+
+    /// <summary>
+    /// v0.32: 舊 db schema (v0.28 前) 有 IX_Clubs_Name UNIQUE 約束.
+    /// v0.32 起 Clubs.Name 不再 unique (不同社可同 name). 檢查並 DROP INDEX IF EXISTS.
+    /// </summary>
+    private static void DropLegacyUniqueConstraints(string dbPath)
+    {
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={dbPath}");
+            conn.Open();
+            using var cmd = conn.CreateCommand();
+            // SQLite 索引名格式: IX_Clubs_Name
+            cmd.CommandText = "DROP INDEX IF EXISTS IX_Clubs_Name";
+            var n = cmd.ExecuteNonQuery();
+            if (n > 0)
+            {
+                System.Diagnostics.Debug.WriteLine($"[DbInitializer] v0.32: dropped legacy IX_Clubs_Name unique index");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DbInitializer] v0.32 drop index failed: {ex.Message}");
+        }
     }
 
     /// <summary>用 raw sqlite 查 db 有沒有指定 table。</summary>

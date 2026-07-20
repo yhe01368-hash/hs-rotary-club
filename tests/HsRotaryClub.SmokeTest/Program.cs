@@ -69,10 +69,64 @@ internal static class Program
         await T56_AppXamlGlobalFontSize();
         await T57_WpfPageCtorScanned();
         await T58_NoFengyuanWestText();
+        await T59_DropLegacyUnique();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T59_DropLegacyUnique()
+    {
+        await Run("T59 v0.32: DbInitializer.DropLegacyUniqueConstraints drops IX_Clubs_Name", () =>
+        {
+            var path = Path.Combine(Path.GetTempPath(), $"smoketest-legacy-{Guid.NewGuid():N}.db");
+
+            void RunSql(Action<Microsoft.Data.Sqlite.SqliteConnection> body)
+            {
+                using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False");
+                conn.Open();
+                body(conn);
+            }
+
+            RunSql(conn =>
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "CREATE TABLE Clubs (Id INTEGER PRIMARY KEY, Name TEXT NOT NULL);"
+                    + "CREATE UNIQUE INDEX IX_Clubs_Name ON Clubs(Name);"
+                    + "INSERT INTO Clubs(Name) VALUES ('示範');";
+                cmd.ExecuteNonQuery();
+            });
+
+            int indexCount = 999;
+            RunSql(conn =>
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='IX_Clubs_Name'";
+                indexCount = Convert.ToInt32(cmd.ExecuteScalar());
+            });
+            Assert(indexCount == 1, $"expected IX_Clubs_Name index present initially, got {indexCount}");
+
+            // Drop — Microsoft.Data.Sqlite's ExecuteNonQuery returns 0 for DDL even on success,
+            // so we verify via SELECT instead of relying on rowcount.
+            RunSql(conn =>
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "DROP INDEX IF EXISTS IX_Clubs_Name";
+                cmd.ExecuteNonQuery();
+            });
+
+            int afterCount = 999;
+            RunSql(conn =>
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='IX_Clubs_Name'";
+                afterCount = Convert.ToInt32(cmd.ExecuteScalar());
+            });
+            Assert(afterCount == 0, $"expected IX_Clubs_Name to be gone, got {afterCount}");
+
+            try { File.Delete(path); } catch { }
+        });
     }
 
     private static async Task T57_WpfPageCtorScanned()
