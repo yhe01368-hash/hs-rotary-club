@@ -10,12 +10,15 @@ using Microsoft.EntityFrameworkCore;
 namespace HsRotaryClub.App.ViewModels;
 
 /// <summary>
-/// 社團管理 — v0.7 A3 + A5。
-/// 對齊舊版畫面 01 「會員資料管理作業」的「社團」面,但這版先純 Club entity CRUD + soft-delete。
-/// MakeCurrent 切 CurrentClubContext — 推播給所有 VM 自動 Reload。
+/// v0.7 A3 + A5。
+/// MakeCurrent 切 CurrentClubContext — 推播給所有 VM 自動 Reload.
+/// v0.29: 自動遷移舊 seed 名「豐原西南扶輪社」→「示範扶輪社」避免跟用戶新建社撞 UNIQUE.
 /// </summary>
 public partial class ClubManagementViewModel : ObservableObject
 {
+    private const string LegacySeedName = "豐原西南扶輪社";
+    private const string GenericSeedName = "示範扶輪社";
+
     private readonly RotaryDbContext _db;
     private readonly CurrentClubContext _currentClubCtx;
 
@@ -33,7 +36,6 @@ public partial class ClubManagementViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "就緒";
 
-    /// <summary>app 啟動時選定的社 ID;UI 操作切社後存這裡給其他 VM filter 用。</summary>
     [ObservableProperty]
     private int _currentClubId = SeedData.DefaultClubId;
 
@@ -50,34 +52,59 @@ public partial class ClubManagementViewModel : ObservableObject
     partial void OnFilterChanged(string value) => Reload();
     partial void OnShowInactiveOnlyChanged(bool value) => Reload();
 
+    /// <summary>
+    /// v0.29 — 自動把舊 demo seed name 改成通用名。
+    /// 這樣 user 新增同名社團時不會撞 Clubs.Name UNIQUE constraint.
+    /// </summary>
+    private void MigrateLegacySeedNames()
+    {
+        try
+        {
+            var targets = _db.Clubs.Where(c => c.Name == LegacySeedName).ToList();
+            if (targets.Count == 0) return;
+            foreach (var c in targets)
+            {
+                c.Name = GenericSeedName;
+            }
+            if (_db.TrySaveChanges(out var error))
+            {
+                System.Diagnostics.Debug.WriteLine($"[v0.29] migrated {targets.Count} clubs from '{LegacySeedName}' to '{GenericSeedName}'");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[v0.29] migrate failed: {error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[v0.29] migrate exception: {ex.Message}");
+        }
+    }
+
     [RelayCommand]
     private void Reload()
     {
         try
         {
-            DoReload();
+            MigrateLegacySeedNames();
+            Clubs.Clear();
+            var q = _db.Clubs.AsNoTracking().AsQueryable();
+            q = ShowInactiveOnly ? q.Where(c => !c.IsActive) : q.Where(c => c.IsActive);
+            if (!string.IsNullOrWhiteSpace(Filter))
+            {
+                q = q.Where(c => c.Name.Contains(Filter) || (c.District ?? "").Contains(Filter));
+            }
+            foreach (var c in q.OrderBy(c => c.Name).ToList())
+                Clubs.Add(c);
+            Selected ??= Clubs.FirstOrDefault(c => c.Id == _currentClubCtx.CurrentClubId) ?? Clubs.FirstOrDefault();
+            CurrentClubName = _currentClubCtx.CurrentClubName;
+            StatusMessage = $"載入 {Clubs.Count} 個社團";
         }
         catch (Exception ex)
         {
             StatusMessage = $"Reload 失敗: {ex.Message}";
             System.Diagnostics.Debug.WriteLine($"[ClubMgmt.Reload] {ex}");
         }
-    }
-
-    private void DoReload()
-    {
-        Clubs.Clear();
-        var q = _db.Clubs.AsNoTracking().AsQueryable();
-        q = ShowInactiveOnly ? q.Where(c => !c.IsActive) : q.Where(c => c.IsActive);
-        if (!string.IsNullOrWhiteSpace(Filter))
-        {
-            q = q.Where(c => c.Name.Contains(Filter) || (c.District ?? "").Contains(Filter));
-        }
-        foreach (var c in q.OrderBy(c => c.Name).ToList())
-            Clubs.Add(c);
-        Selected ??= Clubs.FirstOrDefault(c => c.Id == _currentClubCtx.CurrentClubId) ?? Clubs.FirstOrDefault();
-        CurrentClubName = _currentClubCtx.CurrentClubName;
-        StatusMessage = $"載入 {Clubs.Count} 個社團";
     }
 
     [RelayCommand]
@@ -115,7 +142,6 @@ public partial class ClubManagementViewModel : ObservableObject
         Reload();
     }
 
-    /// <summary>軟刪: IsActive=false。資料保留給未來 v0.11 還原工具。</summary>
     [RelayCommand]
     private void Deactivate()
     {
@@ -132,7 +158,6 @@ public partial class ClubManagementViewModel : ObservableObject
         Reload();
     }
 
-    /// <summary>切換 current club (切到 Selected 為操作社) — v0.7 A5 推播給其他 VM。</summary>
     [RelayCommand]
     private void MakeCurrent()
     {
@@ -141,7 +166,6 @@ public partial class ClubManagementViewModel : ObservableObject
         StatusMessage = $"已切到「{Selected.Name}」為操作社";
     }
 
-    /// <summary>v0.8 — 拉 ImportExport dialog。</summary>
     [RelayCommand]
     private void ImportExport()
     {
@@ -149,7 +173,6 @@ public partial class ClubManagementViewModel : ObservableObject
         ImportExportDialog.Show(_db, _currentClubCtx.CurrentClubId, _currentClubCtx.CurrentClubName, owner);
     }
 
-    /// <summary>v0.15 — 拉 Migration dialog (從舊版 mdb 遷移)。</summary>
     [RelayCommand]
     private void MigrateFromMdb()
     {
