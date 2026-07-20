@@ -34,7 +34,8 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.ContactEmail).HasMaxLength(100);
             e.Property(x => x.Remarks).HasMaxLength(500);
             e.Property(x => x.IsActive).HasDefaultValue(true);
-            e.HasIndex(x => x.Name).IsUnique();
+            // v0.32: 拿掉 Clubs.Name 的 unique — 不同社團可有同名 (e.g. 多個示範/分區).
+            e.HasIndex(x => x.Name);
             e.HasIndex(x => x.IsActive);
         });
 

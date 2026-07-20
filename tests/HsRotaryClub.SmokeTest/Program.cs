@@ -974,19 +974,19 @@ internal static class Program
             // 中文 + Unicode round-trip
             Assert(got.Remarks == null || got.Remarks.Length >= 0, "Remarks getter works");
 
-            // Unique name — 試圖加同名社應 fail
-            var dup = new Club { Name = "豐原西南扶輪社" };
+            // v0.32: Club.Name 不再 unique — 不同社可同名 (e.g. 多個示範/分區). 應能加同名社.
+            var dup = new Club { Name = "豐原西南扶輪社", District = "3460 / diff" };
             ctx.Clubs.Add(dup);
-            Assert(ctx.TrySaveChanges(out var err) == false, "duplicate Name should fail");
-            Assert(err.Contains("UNIQUE") || err.Length > 0, $"expected unique constraint error: '{err}'");
+            Assert(ctx.TrySaveChanges(out var err), $"duplicate name should now save: '{err}'");
             ctx.ChangeTracker.Clear();
 
             // Soft-disable
-            var tracked = ctx.Clubs.First(c => c.Name == "豐原西南扶輪社");
-            tracked.IsActive = false;
+            // v0.32: Club.Name 不再 unique — 設 ALL 同名的 active 為 false,確保 active count 為 0.
+            var tracked = ctx.Clubs.Where(c => c.Name == "豐原西南扶輪社").ToList();
+            foreach (var c in tracked) c.IsActive = false;
             ctx.SaveChanges();
-            var active = ctx.Clubs.Where(c => c.IsActive).Count();
-            Assert(active == 1, $"only 1 should be active, got {active}");
+            var active = ctx.Clubs.Where(c => c.Name == "豐原西南扶輪社" && c.IsActive).Count();
+            Assert(active == 0, $"0 should be active after soft-disable, got {active}");
 
             // 軟刪後用 SeedData 加同 name 會成功(因為舊已 IsActive=false — IsUnique 只擋名稱 exact match,不擋 IsActive)
             // 實際上 unique name 仍擋 — 但我們清掉重新 add 看 isActive filter
