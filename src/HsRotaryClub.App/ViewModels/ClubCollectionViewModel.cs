@@ -79,13 +79,20 @@ public partial class ClubCollectionViewModel : ObservableObject
     [RelayCommand]
     private void Add()
     {
+        // v0.34: 若 user 已在右側編輯 (Selected) 並輸入 社員/金額/日期,Add 直接複用,
+        // 不要 hardcode placeholder. 沒 Selected 才退到 (待選) placeholder.
+        var src = Selected;
         var c = new ClubCollection
         {
             Year = Year, Month = Month,
-            CollectionDate = new DateOnly(Year, Month, 1),
-            Category = "會費",
-            MemberCode = 0,
-            MemberName = "(待選)", // v0.33: 設為 "(待選)" 顯示後,由 user 從右側選社員填入.
+            CollectionDate = src?.CollectionDate ?? new DateOnly(Year, Month, 1),
+            Category = string.IsNullOrWhiteSpace(src?.Category) ? "會費" : src!.Category,
+            MemberCode = src?.MemberCode ?? 0,
+            MemberName = src?.MemberName ?? "(待選)",
+            CashAmount = src?.CashAmount ?? 0m,
+            CheckAmount = src?.CheckAmount ?? 0m,
+            ReceiptNo = src?.ReceiptNo ?? "",
+            Collector = src?.Collector ?? "",
             ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.ClubCollections.Add(c);
@@ -94,17 +101,18 @@ public partial class ClubCollectionViewModel : ObservableObject
             StatusMessage = $"新增失敗: {error}";
             return;
         }
-        // v0.33: SaveChanges 已給 EF 自動 Id. Reload 後 Selected 會是剛加的 row,
-        // 為讓 user 看見 row 識別,把 MemberName 加上 "#Id" 前綴直到真的選社員.
-        c.MemberName = $"#{c.Id} (待選)";
-        if (!_db.TrySaveChanges(out var err2))
+        // v0.33: SaveChanges 已給 EF 自動 Id. 當 MemberName 仍是 placeholder 時顯示 row id.
+        if (string.IsNullOrEmpty(src?.MemberName) || src!.MemberName == "(待選)")
         {
-            // 改 prefix 失敗不影響主新增 — 主 row 已存.
-            StatusMessage = $"新增成功但 id 顯示失敗: {err2}";
+            c.MemberName = $"#{c.Id} (待選)";
+            if (!_db.TrySaveChanges(out var err2))
+            {
+                StatusMessage = $"新增成功但 id 顯示失敗: {err2}";
+            }
         }
         Reload();
         Selected = Collections.FirstOrDefault(x => x.Id == c.Id);
-        StatusMessage = $"已新增 #{c.Id} (待選社員),請從右側選社員";
+        StatusMessage = $"已新增 #{c.Id} {c.MemberName}";
     }
 
     [RelayCommand]
