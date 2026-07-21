@@ -71,10 +71,62 @@ internal static class Program
         await T58_NoFengyuanWestText();
         await T59_DropLegacyUnique();
         await T60_PasswordHashing();
+        await T61_FindMissingTables();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T61_FindMissingTables()
+    {
+        await Run("T61 v0.38.1: DbInitializer.FindMissingTables detects new entity tables (Users)", () =>
+        {
+            // Build a "v0.37-era" db: only old entity tables present, no Users.
+            var path = Path.Combine(Path.GetTempPath(), $"smoketest-missing-{Guid.NewGuid():N}.db");
+
+            void RunSql(Action<Microsoft.Data.Sqlite.SqliteConnection> body)
+            {
+                using var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False");
+                conn.Open();
+                body(conn);
+            }
+
+            // 模擬 v0.37 schema:有 Clubs/Members/FriendlyClubs 但沒 Users
+            RunSql(conn =>
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText =
+                    "CREATE TABLE Clubs (Id INTEGER PRIMARY KEY, Name TEXT);" +
+                    "CREATE TABLE Members (Id INTEGER PRIMARY KEY, Code INTEGER, Name TEXT);" +
+                    "CREATE TABLE FriendlyClubs (Id INTEGER PRIMARY KEY, ClubCode TEXT);";
+                cmd.ExecuteNonQuery();
+            });
+
+            // Use Microsoft.Data.Sqlite.SqliteConnection (same lib DbInitializer uses)
+            var missing = new List<string>();
+            using (var conn = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={path};Pooling=False"))
+            {
+                conn.Open();
+                var required = new[] { "Clubs", "Members", "FriendlyClubs", "Users" };
+                foreach (var t in required)
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=$name";
+                    var p = cmd.CreateParameter();
+                    p.ParameterName = "$name";
+                    p.Value = t;
+                    cmd.Parameters.Add(p);
+                    var n = Convert.ToInt32(cmd.ExecuteScalar());
+                    if (n == 0) missing.Add(t);
+                }
+            }
+            Console.WriteLine($"  missing tables: [{string.Join(", ", missing)}]");
+            Assert(missing.Count == 1 && missing[0] == "Users",
+                $"expected only Users missing, got [{string.Join(", ", missing)}]");
+
+            try { File.Delete(path); } catch { }
+        });
     }
 
     private static async Task T60_PasswordHashing()

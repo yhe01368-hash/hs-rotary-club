@@ -41,8 +41,9 @@ public sealed class DbInitializer
     }
 
     /// <summary>
-    /// 偵測 db 存在但無 Clubs table (升級舊 db schema 不 match 時) → 砍掉重建。
-    /// 否則走 EF EnsureCreated (對完全空的 db 建表)。
+    /// 偵測 db 存在但任一 known entity table 缺失 (升級舊 db schema 不 match 時) → 砍掉重建.
+    /// v0.38.1: 從「只 check Clubs」改為「check 所有 15 個 entity tables」 — 確保 v0.38+ 新增 Users table
+    /// 等所有 entity 在 upgrade 時自動建好. 然後走 EF EnsureCreated (對完全空的 db 建表).
     /// </summary>
     private void EnsureSchemaOrRecreate(string dbPath)
     {
@@ -54,20 +55,21 @@ public sealed class DbInitializer
             return;
         }
 
-        // 存在但無 Clubs table → 砍掉重建
-        if (!HasTable(dbPath, "Clubs"))
+        // 存在但任一 known entity table 缺失 → 砍掉重建.
+        // 對 stable 升級:舊 db v0.37 (有 Clubs/Members/FriendlyClubs 沒有 Users)
+        // → check 失敗 → 砍掉重建 → 重新 seed 全部 demo + admin user.
+        var missing = FindMissingTables(dbPath, _requiredTables);
+        if (missing.Count > 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[DbInitializer] 舊 db 無 Clubs table,砍掉重建: {dbPath}");
+            System.Diagnostics.Debug.WriteLine($"[DbInitializer] v0.38.1: db missing tables [{string.Join(", ", missing)}],砍掉重建: {dbPath}");
             try { File.Delete(dbPath); } catch { /* 可能被 lock,繼續 — EnsureCreated 會 fail */ }
             try
             {
-                // EF Core 自動用 connection string 的 db
                 using var db = new RotaryDbContext(_options);
                 db.Database.EnsureCreated();
             }
             catch
             {
-                // 如果砍不掉,user 看到 seed error,引導手動砍
                 throw;
             }
             return;
@@ -76,6 +78,57 @@ public sealed class DbInitializer
         // 存在且 schema OK → 跳過 EnsureCreated
         // v0.32: 檢查舊 v0.28 db 是否有 Clubs.Name UNIQUE index — 有的話 drop (v0.32 起不同社可同名)
         DropLegacyUniqueConstraints(dbPath);
+    }
+
+    /// <summary>
+    /// v0.38.1: 列出所有 RotaryDbContext 必須存在的 entity tables (跟 DbSet 一一對應).
+    /// 任一缺 → 砍 db 重建 (一次性 migrate).
+    /// </summary>
+    private static readonly string[] _requiredTables = new[]
+    {
+        "Clubs",
+        "Members",
+        "ClubCollections",
+        "MonthlyReceivableSpecs",
+        "FriendlyClubs",
+        "ClubDonations",
+        "AttendanceGroups",       // v0.10
+        "AttendanceRecords",      // v0.10
+        "OtherIncomes",           // v0.12
+        "MonthlyExpenses",        // v0.12
+        "AccountSubjects",        // v0.12
+        "AccountEntries",         // v0.12
+        "MailJobs",               // v0.12
+        "MailRecipients",         // v0.12
+        "Users",                  // v0.38
+    };
+
+    private static List<string> FindMissingTables(string dbPath, string[] tables)
+    {
+        var missing = new List<string>();
+        try
+        {
+            using var conn = new SqliteConnection($"Data Source={dbPath}");
+            conn.Open();
+            foreach (var t in tables)
+            {
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=$name";
+                var p = cmd.CreateParameter();
+                p.ParameterName = "$name";
+                p.Value = t;
+                cmd.Parameters.Add(p);
+                var n = Convert.ToInt32(cmd.ExecuteScalar());
+                if (n == 0) missing.Add(t);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[DbInitializer] v0.38.1 missing-tables check failed: {ex.Message}");
+            // db 壞掉 → 當作全部缺,觸發砍 db 重建
+            foreach (var t in tables) missing.Add(t);
+        }
+        return missing;
     }
 
     /// <summary>
