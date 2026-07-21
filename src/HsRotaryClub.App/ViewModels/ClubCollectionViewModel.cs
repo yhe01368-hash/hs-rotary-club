@@ -33,6 +33,13 @@ public partial class ClubCollectionViewModel : ObservableObject
     [ObservableProperty]
     private string _statusMessage = "就緒";
 
+    /// <summary>
+    /// v0.35: 收款日期獨立屬性. DatePicker 綁這,不綁 Selected.CollectionDate.
+    /// 否則 user 改 DatePicker 寫到舊 Selected 上,Save 後舊 row 被覆寫;Add() 看 Selected 還是舊日期.
+    /// </summary>
+    [ObservableProperty]
+    private DateTime? _newDate = DateTime.Today;
+
     public ClubCollectionViewModel(RotaryDbContext db, CurrentClubContext currentClub)
     {
         _db = db;
@@ -85,7 +92,8 @@ public partial class ClubCollectionViewModel : ObservableObject
         var c = new ClubCollection
         {
             Year = Year, Month = Month,
-            CollectionDate = src?.CollectionDate ?? new DateOnly(Year, Month, 1),
+            // v0.35: 從獨立 NewDate 屬性取日期,不從 Selected.CollectionDate (避免寫入舊 row).
+            CollectionDate = NewDate.HasValue ? DateOnly.FromDateTime(NewDate.Value) : new DateOnly(Year, Month, 1),
             Category = string.IsNullOrWhiteSpace(src?.Category) ? "會費" : src!.Category,
             MemberCode = src?.MemberCode ?? 0,
             MemberName = src?.MemberName ?? "(待選)",

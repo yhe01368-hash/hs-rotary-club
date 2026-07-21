@@ -76,7 +76,8 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="收款日期" Grid.Row="1" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
-                <DatePicker SelectedDate="{Binding CollectionDate, Mode=TwoWay}" Grid.Row="1" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left" FontSize="14"/>
+                <!-- v0.35: 改綁 VM.NewDate (獨立屬性),不綁 Selected.CollectionDate (避免 user 改日期寫入舊 row) -->
+                <DatePicker SelectedDate="{Binding DataContext.NewDate, RelativeSource={RelativeSource AncestorType=Page}, Mode=TwoWay}" Grid.Row="1" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left" FontSize="14"/>
 
                 <TextBlock Text="社員編號" Grid.Row="2" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
                 <TextBox   Text="{Binding MemberCode, Mode=TwoWay}" Grid.Row="2" Grid.Column="1" Margin="2,4" Width="80" HorizontalAlignment="Left" FontSize="14"/>
