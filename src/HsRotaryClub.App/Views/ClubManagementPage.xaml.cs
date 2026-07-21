@@ -52,4 +52,21 @@ public partial class ClubManagementPage : UserControl
             MessageBox.Show($"License 管理失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
+
+    /// <summary>
+    /// v0.39: 開啟使用者管理 dialog. admin 帳號自動有權限,其他 user 也可進入 (v0.39 不限制).
+    /// </summary>
+    private void OpenUserMgmt_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            var owner = Window.GetWindow(this);
+            HsRotaryClub.App.Controls.UserManagementDialog.Show(owner);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[OpenUserMgmt] {ex}");
+            MessageBox.Show($"使用者管理失敗: {ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
 }

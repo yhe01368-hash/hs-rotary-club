@@ -26,6 +26,7 @@
             <Button Content="匯出 / 匯入" Command="{Binding ImportExportCommand}" Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
             <Button Content="📥 mdb 遷移" Command="{Binding MigrateFromMdbCommand}" Padding="8,4" Margin="4,0" Background="#FFD27F"/>
             <Button Content="🔐 License 管理" Click="OpenLicenseAdmin_Click" Padding="8,4" Margin="4,0"/>
+            <Button Content="👤 使用者管理" Click="OpenUserMgmt_Click" Padding="8,4" Margin="4,0" Background="#A0C4FF"/>
         </DockPanel>
 
         <!-- 中: 左速查 + 右表單 -->
