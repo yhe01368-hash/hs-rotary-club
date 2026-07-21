@@ -83,6 +83,7 @@ public partial class App : Application
             });
             services.AddScoped<RotaryDbContext>();
             services.AddSingleton<CurrentClubContext>();
+            services.AddSingleton<CurrentUserContext>();  // v0.38
             services.AddSingleton<DbInitializer>();
             services.AddTransient<HomeViewModel>();
             services.AddTransient<ClubManagementViewModel>();
@@ -117,6 +118,16 @@ public partial class App : Application
 
             var vm = Services.GetRequiredService<MainWindowViewModel>();
             var window = Services.GetRequiredService<MainWindow>();
+
+            // v0.38: 顯示登入 dialog. 取消或失敗則 Shutdown,登入成功才顯示主視窗.
+            var user = HsRotaryClub.App.Controls.LoginDialog.Show();
+            if (user is null)
+            {
+                Shutdown(0);
+                return;
+            }
+            System.Diagnostics.Debug.WriteLine($"[v0.38] login as {user.Username} ({user.Role})");
+
             window.Show();
         }
         catch (Exception ex)

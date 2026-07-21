@@ -37,6 +37,20 @@ public static class SeedData
         new() { ClubCode = "FC003", ClubName = "大里扶輪社",     Remarks = "聯合例會" },
     };
 
+    /// <summary>v0.38 — 預設 admin 帳號.密碼用 PBKDF2-SHA256 雜湊後存.</summary>
+    public static readonly User[] DemoUsers =
+    {
+        new()
+        {
+            Username = "admin",
+            PasswordHash = PasswordHasher.Hash("admin"),
+            DisplayName = "系統管理員",
+            Role = UserRole.Admin,
+            IsActive = true,
+            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+        },
+    };
+
     /// <summary>
     /// 預設社 ID = 1 (示範扶輪社)。所有 demo Member/FriendlyClub/ClubCollection
     /// 之後在 v0.7 進階 commit 加 ClubId = DefaultClubId 過濾。
@@ -61,6 +75,13 @@ public static class SeedData
         if (!db.FriendlyClubs.Any())
         {
             db.FriendlyClubs.AddRange(DemoFriendlyClubs);
+            db.SaveChanges();
+        }
+
+        // v0.38: 預設 admin 帳號 (Username=admin, Password=admin) — Admin 自己改成更安全的密碼.
+        if (!db.Users.Any())
+        {
+            db.Users.AddRange(DemoUsers);
             db.SaveChanges();
         }
     }

@@ -70,10 +70,42 @@ internal static class Program
         await T57_WpfPageCtorScanned();
         await T58_NoFengyuanWestText();
         await T59_DropLegacyUnique();
+        await T60_PasswordHashing();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T60_PasswordHashing()
+    {
+        await Run("T60 v0.38: PasswordHasher.Hash + Verify round-trip + invalid rejects", () =>
+        {
+            var password = "secret123";
+            var stored = HsRotaryClub.Infrastructure.PasswordHasher.Hash(password);
+            Assert(stored.Contains(':'), "stored hash should have salt:hash format");
+            var (saltB64, hashB64) = (stored.Split(':')[0], stored.Split(':')[1]);
+            Assert(saltB64.Length > 0 && hashB64.Length > 0, "salt/hash non-empty");
+
+            // Verify same password matches
+            Assert(HsRotaryClub.Infrastructure.PasswordHasher.Verify(password, stored), "Verify(same) should match");
+
+            // Verify different password fails
+            Assert(!HsRotaryClub.Infrastructure.PasswordHasher.Verify("wrong", stored), "Verify(different) should fail");
+
+            // Empty / null safety
+            Assert(!HsRotaryClub.Infrastructure.PasswordHasher.Verify("", stored), "empty password should fail");
+            Assert(!HsRotaryClub.Infrastructure.PasswordHasher.Verify(password, ""), "empty stored should fail");
+
+            // Two hashes of same password differ (random salt)
+            var stored2 = HsRotaryClub.Infrastructure.PasswordHasher.Hash(password);
+            Assert(stored != stored2, "two hashes should differ (salt randomness)");
+            Assert(HsRotaryClub.Infrastructure.PasswordHasher.Verify(password, stored2), "second hash also verifies");
+
+            // Corrupted stored format
+            Assert(!HsRotaryClub.Infrastructure.PasswordHasher.Verify(password, "garbage"), "garbage stored should fail");
+            Assert(!HsRotaryClub.Infrastructure.PasswordHasher.Verify(password, "a:b:c"), "3-part stored should fail");
+        });
     }
 
     private static async Task T59_DropLegacyUnique()

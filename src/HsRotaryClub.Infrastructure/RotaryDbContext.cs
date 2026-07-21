@@ -22,6 +22,7 @@ public class RotaryDbContext : DbContext
     public DbSet<AccountEntry> AccountEntries => Set<AccountEntry>();  // v0.12
     public DbSet<MailJob> MailJobs => Set<MailJob>();  // v0.12
     public DbSet<MailRecipient> MailRecipients => Set<MailRecipient>();  // v0.12
+    public DbSet<User> Users => Set<User>();  // v0.38 登入帳號
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
@@ -176,6 +177,16 @@ public class RotaryDbContext : DbContext
             e.Property(x => x.Email).HasMaxLength(200);
             e.Property(x => x.ErrorMessage).HasMaxLength(500);
             e.HasIndex(x => x.MailJobId);
+        });
+
+        mb.Entity<User>(e =>
+        {
+            e.HasKey(x => x.Id);
+            e.Property(x => x.Username).HasMaxLength(50).IsRequired();
+            e.Property(x => x.PasswordHash).HasMaxLength(200).IsRequired();
+            e.Property(x => x.DisplayName).HasMaxLength(100);
+            e.Property(x => x.Role).HasConversion<int>();
+            e.HasIndex(x => x.Username).IsUnique();
         });
     }
 }
