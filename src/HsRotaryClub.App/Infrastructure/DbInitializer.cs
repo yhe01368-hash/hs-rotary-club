@@ -32,14 +32,19 @@ public sealed class DbInitializer
         }
         catch (Exception ex)
         {
-            // 不再讓 seed exception crash 整個 App — 顯示給 user + 寫 log
+            // v0.38.2: seed 失敗 → 直接 abort app (不顯示 LoginDialog, 因為 db 不一致).
+            // 之前 v0.16.1 會 MessageBox 後繼續,結果 LoginDialog 出來然後 db 壞掉 user 輸入還壞.
             var msg = $"DB seed 失敗: {ex.Message}\n\n詳細:\n{ex}";
             System.Diagnostics.Debug.WriteLine($"[DbInitializer] {msg}");
-            System.Windows.MessageBox.Show(msg, "資料庫初始化錯誤",
-                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            System.Windows.MessageBox.Show(
+                msg + "\n\nApp 將關閉。請刪除 db 檔後重試,或聯絡管理員。",
+                "資料庫初始化錯誤",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Error);
+            // Abort: 不能讓 LoginDialog 出來使用壞 db.
+            System.Windows.Application.Current.Shutdown(1);
         }
     }
-
     /// <summary>
     /// 偵測 db 存在但任一 known entity table 缺失 (升級舊 db schema 不 match 時) → 砍掉重建.
     /// v0.38.1: 從「只 check Clubs」改為「check 所有 15 個 entity tables」 — 確保 v0.38+ 新增 Users table
