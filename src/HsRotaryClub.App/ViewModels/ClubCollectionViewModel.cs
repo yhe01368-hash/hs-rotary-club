@@ -158,7 +158,18 @@ public partial class ClubCollectionViewModel : ObservableObject
     private void PickMember()
     {
         var picked = MemberLookupDialog.Ask();
-        if (picked is null || Selected is null) return;
+        if (picked is null) return;
+        // v0.36: 沒有 Selected 時,自動 Add() 創一個 placeholder row 給 Selected 綁定,
+        // 這樣 user 按「挑選社員」就不會 silently 被 Selected null guard 擋掉.
+        if (Selected is null)
+        {
+            Add();
+            if (Selected is null)
+            {
+                StatusMessage = "無法建立新 row,請先按「新增」";
+                return;
+            }
+        }
         // v0.31: 對 Selected 重新 set 一次觸發 INPC,確保欄位 binding 重新讀取.
         // sub-property 寫入 (Selected.MemberCode = ...) 不會自動 fire INPC,
         // 因為 Selected reference 沒變,所以右側欄位 + grid row 都不 refresh.
