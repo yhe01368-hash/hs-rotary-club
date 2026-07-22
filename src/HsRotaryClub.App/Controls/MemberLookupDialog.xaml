@@ -29,10 +29,10 @@
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                            <!-- v0.47: 改用橙色 #FF8C00 (DarkOrange) — 比藍色更顯眼 -->
+                                            <!-- v0.49: 改用深藍色 #0000C6 — 顯眼且夠深色 -->
                                             <Setter Property="Foreground">
                                                 <Setter.Value>
-                                                    <SolidColorBrush Color="#FF8C00"/>
+                                                    <SolidColorBrush Color="#0000C6"/>
                                                 </Setter.Value>
                                             </Setter>
                                         </DataTrigger>
