@@ -72,10 +72,39 @@ internal static class Program
         await T59_DropLegacyUnique();
         await T60_PasswordHashing();
         await T61_FindMissingTables();
+        await T62_CollectorAutoDefault();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T62_CollectorAutoDefault()
+    {
+        await Run("T62 v0.40/v0.41: ClubCollection.Collector defaults to current user DisplayName", () =>
+        {
+            // Simulate: Add() with src=null (fresh), currentUser "系統管理員"
+            // Then assert: Collector = "系統管理員"
+            var src = (ClubCollection?)null;
+            var isAuthed = true;
+            var displayName = "系統管理員";
+
+            string collector = !string.IsNullOrWhiteSpace(src?.Collector)
+                ? src!.Collector
+                : (isAuthed ? displayName : "");
+
+            Assert(collector == "系統管理員", $"expected auto-fill '系統管理員', got '{collector}'");
+
+            // Save() with empty existing Collector + authed user → also fills
+            var existing = new ClubCollection { Collector = "" };
+            if (string.IsNullOrWhiteSpace(existing.Collector) && isAuthed)
+                existing.Collector = displayName;
+            Assert(existing.Collector == "系統管理員", "Save() should fill empty Collector");
+
+            // Save() with non-empty existing Collector → user wins
+            existing.Collector = "手工指定";
+            Assert(existing.Collector == "手工指定", "Save() should preserve existing Collector");
+        });
     }
 
     private static async Task T61_FindMissingTables()

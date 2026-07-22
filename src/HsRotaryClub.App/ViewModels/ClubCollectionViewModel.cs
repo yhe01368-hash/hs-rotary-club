@@ -135,6 +135,11 @@ public partial class ClubCollectionViewModel : ObservableObject
         var attached = _db.ClubCollections.FirstOrDefault(c => c.Id == Selected.Id);
         if (attached is null) { StatusMessage = "DB 找不到"; return; }
         _db.Entry(attached).CurrentValues.SetValues(Selected);
+        // v0.41: Save 時若 Collector 空 → 自動帶入當前 user (補回 user 不透過 Add 而是直接編輯舊 row).
+        if (string.IsNullOrWhiteSpace(attached.Collector) && _currentUser.IsAuthenticated)
+        {
+            attached.Collector = _currentUser.CurrentDisplayName;
+        }
         if (!_db.TrySaveChanges(out var error))
         {
             StatusMessage = $"儲存失敗: {error}";
