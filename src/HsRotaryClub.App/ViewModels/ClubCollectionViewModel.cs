@@ -176,7 +176,11 @@ public partial class ClubCollectionViewModel : ObservableObject
         // v0.52: 重新從 db 載入,讓 ListBox row 跟著刷新 (Selected.CollectionDate/Amount 變動才看得到).
         Reload();
         // restore Selected to the same Id
-        Selected = Collections.FirstOrDefault(c => c.Id == attached.Id);
+        var saved = Collections.FirstOrDefault(c => c.Id == attached.Id);
+        // v0.53: 儲存後清掉 Selected,讓下一次「挑選社員」自動 Add 新 row (而不是覆蓋剛儲存的)
+        Selected = null;
+        // v0.53: 同步 status 提示 user 已清空,可繼續新增
+        StatusMessage = $"已儲存 #{attached.Id},請挑選社員繼續新增下一筆";
     }
 
     [RelayCommand]
