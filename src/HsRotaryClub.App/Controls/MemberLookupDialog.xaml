@@ -2,8 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="選擇社員"
-        Width="480" Height="500"
-        WindowStartupLocation="CenterOwner">
+        Width="520" Height="560"
+        WindowStartupLocation="CenterOwner"
+        FontFamily="Microsoft JhengHei, Microsoft YaHei, Segoe UI"
+        FontSize="16">
     <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -13,17 +15,17 @@
         </Grid.RowDefinitions>
 
         <DockPanel Grid.Row="0" Margin="0,0,0,8">
-            <TextBlock Text="🔍" VerticalAlignment="Center"/>
-            <TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" Margin="4,0"/>
+            <TextBlock Text="🔍" VerticalAlignment="Center" FontSize="16"/>
+            <TextBox x:Name="FilterBox" TextChanged="FilterBox_TextChanged" Margin="4,0" FontSize="16"/>
         </DockPanel>
 
-        <ListBox Grid.Row="1" x:Name="MembersList" MouseDoubleClick="MembersList_MouseDoubleClick" SelectionChanged="MembersList_SelectionChanged">
+        <ListBox Grid.Row="1" x:Name="MembersList" MouseDoubleClick="MembersList_MouseDoubleClick" SelectionChanged="MembersList_SelectionChanged" FontSize="16">
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <StackPanel Orientation="Horizontal" Margin="2">
-                        <TextBlock Text="{Binding Code}" Width="50"/>
+                        <TextBlock Text="{Binding Code}" Width="55" FontSize="16"/>
                         <!-- v0.44: 當月未繳會費的社員名字標藍色 -->
-                        <TextBlock Text="{Binding Name}" Width="160" FontWeight="Bold"
+                        <TextBlock Text="{Binding Name}" Width="180" FontWeight="Bold" FontSize="16"
                                    x:Name="NameText">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -40,19 +42,19 @@
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Text="{Binding EnglishName}" Foreground="Gray"/>
+                        <TextBlock Text="{Binding EnglishName}" Foreground="Gray" FontSize="16"/>
                     </StackPanel>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>
 
         <StackPanel Grid.Row="2" Margin="0,8,0,4">
-            <TextBlock x:Name="SelectedInfo" Foreground="DarkGreen" FontStyle="Italic"/>
+            <TextBlock x:Name="SelectedInfo" Foreground="DarkGreen" FontStyle="Italic" FontSize="16"/>
         </StackPanel>
 
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
-            <Button Content="確定" x:Name="OkButton" IsDefault="True" Click="Ok_Click" Padding="14,4" Margin="0,0,8,0"/>
-            <Button Content="取消" IsCancel="True" Padding="14,4"/>
+            <Button Content="確定" x:Name="OkButton" IsDefault="True" Click="Ok_Click" Padding="14,6" Margin="0,0,8,0" FontSize="16"/>
+            <Button Content="取消" IsCancel="True" Padding="14,6" FontSize="16"/>
         </StackPanel>
     </Grid>
 </Window>
