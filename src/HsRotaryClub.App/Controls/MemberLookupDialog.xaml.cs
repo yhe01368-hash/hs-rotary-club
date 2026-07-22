@@ -23,18 +23,33 @@ public partial class MemberLookupDialog : Window
         LoadAll();
     }
 
-    /// <summary>v0.44: 計算當月未繳會費 (ReceivableSpecs 中 OutstandingAmount > 0) 的 member codes.</summary>
+    /// <summary>
+    /// v0.48: 計算當月未繳會費的 member codes — 用 ClubCollections 判斷 (本月已有收款記錄 = 已繳).
+    /// 之前用 ReceivableSpecs 但實際應收是 user 自己手設的,沒資料就沒人是 overdue.
+    /// </summary>
     private HashSet<int> LoadOverdueMemberCodes()
     {
         var overdue = new HashSet<int>();
         try
         {
             var today = DateTime.Today;
-            // 載入所有 ReceivableSpecs 同 Year/Month 且 OutstandingAmount > 0 的 member codes
-            var q = _db.MonthlyReceivableSpecs.AsNoTracking()
-                .Where(s => s.Year == today.Year && s.Month == today.Month && s.OutstandingAmount > 0)
-                .Select(s => s.MemberCode);
-            foreach (var c in q.Distinct()) overdue.Add(c);
+            // 載入本月已繳費的 member codes (用 ClubCollections 收款記錄)
+            var paidCodes = _db.ClubCollections.AsNoTracking()
+                .Where(c => c.Year == today.Year && c.Month == today.Month
+                         && c.MemberCode > 0)
+                .Select(c => c.MemberCode)
+                .Distinct()
+                .ToList();
+            var paid = new HashSet<int>(paidCodes);
+            // 全現任 member 中扣掉已繳 = 未繳
+            var allCurrentCodes = _db.Members.AsNoTracking()
+                .Where(m => m.IsCurrent)
+                .Select(m => m.Code)
+                .ToList();
+            foreach (var c in allCurrentCodes)
+            {
+                if (!paid.Contains(c)) overdue.Add(c);
+            }
         }
         catch (Exception ex)
         {
