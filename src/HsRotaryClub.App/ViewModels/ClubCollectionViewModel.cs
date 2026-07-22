@@ -102,11 +102,12 @@ public partial class ClubCollectionViewModel : ObservableObject
             CashAmount = src?.CashAmount ?? 0m,
             CheckAmount = src?.CheckAmount ?? 0m,
             ReceiptNo = src?.ReceiptNo ?? "",
-            // v0.41.1: 收款人預設 = 當前登入 user (DisplayName). 用 CurrentDisplayName 是否非空當 guard
-            // (不要依賴 IsAuthenticated,因為 LoginDialog 是在 MainWindow 建構後才設值,VM 早期可能還讀到 false).
-            Collector = !string.IsNullOrWhiteSpace(src?.Collector)
-                ? src!.Collector
-                : (_currentUser.CurrentDisplayName ?? ""),
+            // v0.41.2: 收款人 = 當前 user DisplayName (強優先) — 即使 src.Collector 有值也覆寫,
+            // 因為 Add() 是新增邏輯,user 想建立自己的 row,收款人 = 現在 user 才是合理.
+            // Save() 用相反邏輯:保留 user 編輯 (只在空時填).
+            Collector = !string.IsNullOrEmpty(_currentUser.CurrentDisplayName)
+                ? _currentUser.CurrentDisplayName
+                : (src?.Collector ?? ""),
             ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.ClubCollections.Add(c);
