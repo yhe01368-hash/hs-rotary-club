@@ -23,12 +23,18 @@
                     <StackPanel Orientation="Horizontal" Margin="2">
                         <TextBlock Text="{Binding Code}" Width="50"/>
                         <!-- v0.44: 當月未繳會費的社員名字標藍色 -->
-                        <TextBlock Text="{Binding Name}" Width="160" FontWeight="Bold">
+                        <TextBlock Text="{Binding Name}" Width="160" FontWeight="Bold"
+                                   x:Name="NameText">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                            <Setter Property="Foreground" Value="DodgerBlue"/>
+                                            <!-- v0.46.1: 改用 SolidColorBrush (DodgerBlue) — Style setter 內 brush literal string 在某些 WPF 環境需要 SolidColorBrush 實例 -->
+                                            <Setter Property="Foreground">
+                                                <Setter.Value>
+                                                    <SolidColorBrush Color="#1E90FF"/>
+                                                </Setter.Value>
+                                            </Setter>
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
