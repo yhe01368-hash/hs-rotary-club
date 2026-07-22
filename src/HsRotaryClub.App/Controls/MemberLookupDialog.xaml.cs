@@ -61,7 +61,9 @@ public partial class MemberLookupDialog : Window
             m.IsOverdue = overdueCodes.Contains(m.Code);
             Results.Add(m);
         }
-        MembersList.ItemsSource = Results;
+        // v0.46: Member entity 不實作 INPC,所以 IsOverdue 改值後 UI 不自動 refresh.
+        // 強制 ListBox 重畫 ItemTemplate (讓 DataTrigger 重跑).
+        MembersList.Items.Refresh();
     }
 
     private void FilterBox_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
