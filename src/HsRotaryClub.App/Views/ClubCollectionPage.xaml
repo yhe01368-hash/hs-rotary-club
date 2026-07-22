@@ -124,7 +124,6 @@
                           ItemsSource="{Binding AvailableUsers}"
                           Text="{Binding Collector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="True"/>
-                         Grid.Row="9" Grid.Column="1" Margin="2,4" Width="160" HorizontalAlignment="Left" FontSize="14"/>
             </Grid>
         </Grid>
 
