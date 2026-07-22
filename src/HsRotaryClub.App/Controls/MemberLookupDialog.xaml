@@ -29,10 +29,10 @@
                                 <Style TargetType="TextBlock">
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsOverdue}" Value="True">
-                                            <!-- v0.46.1: 改用 SolidColorBrush (DodgerBlue) — Style setter 內 brush literal string 在某些 WPF 環境需要 SolidColorBrush 實例 -->
+                                            <!-- v0.47: 改用橙色 #FF8C00 (DarkOrange) — 比藍色更顯眼 -->
                                             <Setter Property="Foreground">
                                                 <Setter.Value>
-                                                    <SolidColorBrush Color="#1E90FF"/>
+                                                    <SolidColorBrush Color="#FF8C00"/>
                                                 </Setter.Value>
                                             </Setter>
                                         </DataTrigger>
