@@ -14,6 +14,7 @@ public partial class ClubCollectionViewModel : ObservableObject
 {
     private readonly RotaryDbContext _db;
     private readonly CurrentClubContext _currentClub;
+    private readonly CurrentUserContext _currentUser;  // v0.40: 自動帶入當前 user 作為收款人
 
     public ObservableCollection<ClubCollection> Collections { get; } = new();
     public ObservableCollection<MonthlyReceivableSpec> ReceivableSpecs { get; } = new();
@@ -40,10 +41,11 @@ public partial class ClubCollectionViewModel : ObservableObject
     [ObservableProperty]
     private DateTime? _newDate = DateTime.Today;
 
-    public ClubCollectionViewModel(RotaryDbContext db, CurrentClubContext currentClub)
+    public ClubCollectionViewModel(RotaryDbContext db, CurrentClubContext currentClub, CurrentUserContext currentUser)
     {
         _db = db;
         _currentClub = currentClub;
+        _currentUser = currentUser;  // v0.40
         Reload();
         _currentClub.CurrentClubIdChanged += (_, _) => Reload();
     }
@@ -100,7 +102,10 @@ public partial class ClubCollectionViewModel : ObservableObject
             CashAmount = src?.CashAmount ?? 0m,
             CheckAmount = src?.CheckAmount ?? 0m,
             ReceiptNo = src?.ReceiptNo ?? "",
-            Collector = src?.Collector ?? "",
+            // v0.40: 收款人預設 = 當前登入 user (DisplayName). 若 Selected 已有設定則保留 user 輸入.
+            Collector = !string.IsNullOrWhiteSpace(src?.Collector)
+                ? src!.Collector
+                : (_currentUser.IsAuthenticated ? _currentUser.CurrentDisplayName : ""),
             ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.ClubCollections.Add(c);
