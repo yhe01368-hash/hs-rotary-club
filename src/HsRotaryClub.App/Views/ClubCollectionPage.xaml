@@ -26,6 +26,8 @@
             <Button Content="重新載入"  Command="{Binding ReloadCommand}"        Padding="8,4" Margin="20,0,4,0"/>
             <Button Content="轉 CSV"    Command="{Binding ExportCsvCommand}"     Padding="8,4" Margin="4,0" Background="#C8E6C9"/>
             <Button Content="Recompute" Command="{Binding RecomputeSpecCommand}" Padding="8,4" Margin="4,0" Background="#FFE0B2"/>
+            <!-- v0.42: 取消選取按鈕,讓 user 清空 Selected 再新增 -->
+            <Button Content="取消選取" Click="ClearSelection_Click" Padding="8,4" Margin="20,0,4,0" Background="#E0E0E0"/>
         </DockPanel>
 
         <!-- 上:收款記錄 + 速查 (子 Split: 左速查 / 右表單) -->
@@ -43,7 +45,7 @@
                         <TextBlock Text="🔍 速查(本月)" FontWeight="Bold" FontSize="15" Foreground="#1A4789"/>
                         <TextBox Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}" Margin="0,4" FontSize="14"/>
                     </StackPanel>
-                    <ListBox ItemsSource="{Binding Collections}" SelectedItem="{Binding Selected}">
+                    <ListBox x:Name="CollectionsList" ItemsSource="{Binding Collections}" SelectedItem="{Binding Selected}">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <StackPanel Orientation="Horizontal" Margin="2">
