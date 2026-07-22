@@ -18,9 +18,9 @@
             <TextBlock Text="月份:" Margin="12,0,4,0" VerticalAlignment="Center"/>
             <TextBox Text="{Binding Month, UpdateSourceTrigger=PropertyChanged}" Width="40" VerticalAlignment="Center" FontSize="14"/>
 
-            <!-- v0.41: 按鈕順序改為 挑選社員 → 新增 → 修正 → 刪除 → 重新載入 → 轉 CSV → Recompute -->
+            <!-- v0.41: 按鈕順序改為 挑選社員 → 儲存 → 刪除 → 重新載入 → 轉 CSV → Recompute -->
+            <!-- v0.51: 移除「新增」按鈕 — PickMember 自動 Add(),只需挑選社員 → 填資料 → 儲存 -->
             <Button Content="挑選社員"  Command="{Binding PickMemberCommand}"    Padding="8,4" Margin="20,0,4,0" Background="#A0C4FF"/>
-            <Button Content="新增"      Command="{Binding AddCommand}"           Padding="8,4" Margin="4,0"/>
             <Button Content="儲存"      Command="{Binding SaveCommand}"          Padding="8,4" Margin="4,0" Background="#FFD27F"/>
             <Button Content="刪除"      Command="{Binding DeleteCommand}"        Padding="8,4" Margin="4,0"/>
             <Button Content="重新載入"  Command="{Binding ReloadCommand}"        Padding="8,4" Margin="20,0,4,0"/>
