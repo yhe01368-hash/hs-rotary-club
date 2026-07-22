@@ -173,6 +173,10 @@ public partial class ClubCollectionViewModel : ObservableObject
             return;
         }
         StatusMessage = $"已儲存 #{attached.Id}";
+        // v0.52: 重新從 db 載入,讓 ListBox row 跟著刷新 (Selected.CollectionDate/Amount 變動才看得到).
+        Reload();
+        // restore Selected to the same Id
+        Selected = Collections.FirstOrDefault(c => c.Id == attached.Id);
     }
 
     [RelayCommand]
