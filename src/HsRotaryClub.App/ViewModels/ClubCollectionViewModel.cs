@@ -102,10 +102,11 @@ public partial class ClubCollectionViewModel : ObservableObject
             CashAmount = src?.CashAmount ?? 0m,
             CheckAmount = src?.CheckAmount ?? 0m,
             ReceiptNo = src?.ReceiptNo ?? "",
-            // v0.40: 收款人預設 = 當前登入 user (DisplayName). 若 Selected 已有設定則保留 user 輸入.
+            // v0.41.1: 收款人預設 = 當前登入 user (DisplayName). 用 CurrentDisplayName 是否非空當 guard
+            // (不要依賴 IsAuthenticated,因為 LoginDialog 是在 MainWindow 建構後才設值,VM 早期可能還讀到 false).
             Collector = !string.IsNullOrWhiteSpace(src?.Collector)
                 ? src!.Collector
-                : (_currentUser.IsAuthenticated ? _currentUser.CurrentDisplayName : ""),
+                : (_currentUser.CurrentDisplayName ?? ""),
             ClubId = _currentClub.CurrentClubId,  // v0.7 A5
         };
         _db.ClubCollections.Add(c);
@@ -136,7 +137,8 @@ public partial class ClubCollectionViewModel : ObservableObject
         if (attached is null) { StatusMessage = "DB 找不到"; return; }
         _db.Entry(attached).CurrentValues.SetValues(Selected);
         // v0.41: Save 時若 Collector 空 → 自動帶入當前 user (補回 user 不透過 Add 而是直接編輯舊 row).
-        if (string.IsNullOrWhiteSpace(attached.Collector) && _currentUser.IsAuthenticated)
+        // v0.41.1: 改用 CurrentDisplayName guard (不用 IsAuthenticated).
+        if (string.IsNullOrWhiteSpace(attached.Collector) && !string.IsNullOrEmpty(_currentUser.CurrentDisplayName))
         {
             attached.Collector = _currentUser.CurrentDisplayName;
         }

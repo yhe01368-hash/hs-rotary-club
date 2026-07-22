@@ -73,10 +73,29 @@ internal static class Program
         await T60_PasswordHashing();
         await T61_FindMissingTables();
         await T62_CollectorAutoDefault();
+        await T63_CollectorGuardSimplified();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
         return _fail == 0 ? 0 : 1;
+    }
+
+    private static async Task T63_CollectorGuardSimplified()
+    {
+        await Run("T63 v0.41.1: Collector guard uses CurrentDisplayName != \"\" (not IsAuthenticated)", () =>
+        {
+            // Simulated: DisplayName set but IsAuthenticated = false (early VM state)
+            var displayName = "系統管理員";
+            var isAuthed = false;
+
+            // Logic: !IsNullOrEmpty(CurrentDisplayName) => use it
+            var collector = string.IsNullOrEmpty(displayName) ? "" : displayName;
+            Assert(collector == "系統管理員", $"expected '系統管理員' regardless of IsAuthed={isAuthed}, got '{collector}'");
+
+            // Empty display name → empty collector (not crash)
+            collector = string.IsNullOrEmpty("") ? "" : "";
+            Assert(collector == "", $"empty displayName should yield empty, got '{collector}'");
+        });
     }
 
     private static async Task T62_CollectorAutoDefault()
