@@ -19,6 +19,9 @@ public partial class ClubCollectionViewModel : ObservableObject
     public ObservableCollection<ClubCollection> Collections { get; } = new();
     public ObservableCollection<MonthlyReceivableSpec> ReceivableSpecs { get; } = new();
 
+    /// <summary>v0.43: 下拉選單 — 所有啟用的 user (DisplayName). 收款人 ComboBox 來源.</summary>
+    public ObservableCollection<string> AvailableUsers { get; } = new();
+
     [ObservableProperty]
     private ClubCollection? _selected;
 
@@ -46,8 +49,29 @@ public partial class ClubCollectionViewModel : ObservableObject
         _db = db;
         _currentClub = currentClub;
         _currentUser = currentUser;  // v0.40
+        LoadAvailableUsers();  // v0.43: 收款人 ComboBox 來源
         Reload();
         _currentClub.CurrentClubIdChanged += (_, _) => Reload();
+    }
+
+    /// <summary>v0.43: 從 db 載入所有 IsActive user 的 DisplayName,排序去重.</summary>
+    private void LoadAvailableUsers()
+    {
+        try
+        {
+            AvailableUsers.Clear();
+            var names = _db.Users.AsNoTracking()
+                .Where(u => u.IsActive && !string.IsNullOrWhiteSpace(u.DisplayName))
+                .Select(u => u.DisplayName)
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+            foreach (var n in names) AvailableUsers.Add(n);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LoadAvailableUsers] {ex}");
+        }
     }
 
     partial void OnYearChanged(int value) => Reload();

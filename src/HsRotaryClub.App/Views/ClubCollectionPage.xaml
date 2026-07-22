@@ -21,7 +21,7 @@
             <!-- v0.41: 按鈕順序改為 挑選社員 → 新增 → 修正 → 刪除 → 重新載入 → 轉 CSV → Recompute -->
             <Button Content="挑選社員"  Command="{Binding PickMemberCommand}"    Padding="8,4" Margin="20,0,4,0" Background="#A0C4FF"/>
             <Button Content="新增"      Command="{Binding AddCommand}"           Padding="8,4" Margin="4,0"/>
-            <Button Content="修正"      Command="{Binding SaveCommand}"          Padding="8,4" Margin="4,0" Background="#FFD27F"/>
+            <Button Content="儲存"      Command="{Binding SaveCommand}"          Padding="8,4" Margin="4,0" Background="#FFD27F"/>
             <Button Content="刪除"      Command="{Binding DeleteCommand}"        Padding="8,4" Margin="4,0"/>
             <Button Content="重新載入"  Command="{Binding ReloadCommand}"        Padding="8,4" Margin="20,0,4,0"/>
             <Button Content="轉 CSV"    Command="{Binding ExportCsvCommand}"     Padding="8,4" Margin="4,0" Background="#C8E6C9"/>
@@ -119,7 +119,11 @@
                          Grid.Row="8" Grid.Column="1" Margin="2,4" FontSize="14"/>
 
                 <TextBlock Text="收款人" Grid.Row="9" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
-                <TextBox Text="{Binding Collector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                <!-- v0.43: Collector 改為 ComboBox — user 可從下拉選單挑選所有使用者 -->
+                <ComboBox x:Name="CollectorBox" Grid.Row="9" Grid.Column="1" Margin="2,4" FontSize="14"
+                          ItemsSource="{Binding AvailableUsers}"
+                          Text="{Binding Collector, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          IsEditable="True"/>
                          Grid.Row="9" Grid.Column="1" Margin="2,4" Width="160" HorizontalAlignment="Left" FontSize="14"/>
             </Grid>
         </Grid>
