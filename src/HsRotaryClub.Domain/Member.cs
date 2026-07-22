@@ -114,4 +114,9 @@ public class Member
     /// <summary>速查索引 (舊版 139 社員 筆數 0063 等)</summary>
     [Display(Name = "序號")]
     public int SortOrder { get; set; }
+
+    /// <summary>v0.44: UI 用 IsOverdue 標記,當月未繳會費 (transient, not persisted)</summary>
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
+    public bool IsOverdue { get; set; }
+
 }

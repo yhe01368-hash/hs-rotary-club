@@ -23,9 +23,30 @@ public partial class MemberLookupDialog : Window
         LoadAll();
     }
 
+    /// <summary>v0.44: 計算當月未繳會費 (ReceivableSpecs 中 OutstandingAmount > 0) 的 member codes.</summary>
+    private HashSet<int> LoadOverdueMemberCodes()
+    {
+        var overdue = new HashSet<int>();
+        try
+        {
+            var today = DateTime.Today;
+            // 載入所有 ReceivableSpecs 同 Year/Month 且 OutstandingAmount > 0 的 member codes
+            var q = _db.MonthlyReceivableSpecs.AsNoTracking()
+                .Where(s => s.Year == today.Year && s.Month == today.Month && s.OutstandingAmount > 0)
+                .Select(s => s.MemberCode);
+            foreach (var c in q.Distinct()) overdue.Add(c);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[LoadOverdueMemberCodes] {ex}");
+        }
+        return overdue;
+    }
+
     private void LoadAll(string? filter = null)
     {
         Results.Clear();
+        var overdueCodes = LoadOverdueMemberCodes();
         var q = _db.Members.AsNoTracking().Where(m => m.IsCurrent);
         if (!string.IsNullOrWhiteSpace(filter))
         {
@@ -35,7 +56,11 @@ public partial class MemberLookupDialog : Window
                 m.Code.ToString().Contains(filter));
         }
         foreach (var m in q.OrderBy(m => m.Code).ToList())
+        {
+            // v0.44: 用 IsOverdue 標記,給 XAML DataTrigger 用
+            m.IsOverdue = overdueCodes.Contains(m.Code);
             Results.Add(m);
+        }
         MembersList.ItemsSource = Results;
     }
 
@@ -64,18 +89,16 @@ public partial class MemberLookupDialog : Window
     public static Member? Ask(Window? owner = null)
     {
         var dlg = new MemberLookupDialog();
-        // Try DI's MainWindow first, fallback to Application.Current.MainWindow
         if (owner is null)
         {
             owner = App.Services?.GetService(typeof(MainWindow)) as Window
                     ?? Application.Current?.MainWindow;
         }
-        // v0.30: Owner 設前先檢查,Window 可能已被 close,避免 InvalidOperationException
-            if (owner is not null)
-            {
-                try { dlg.Owner = owner; }
-                catch (InvalidOperationException) { /* owner disposed */ }
-            }
+        if (owner is not null)
+        {
+            try { dlg.Owner = owner; }
+            catch (InvalidOperationException) { /* owner disposed */ }
+        }
         return dlg.ShowDialog() == true ? dlg.SelectedMember : null;
     }
 }
