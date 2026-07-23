@@ -80,7 +80,7 @@
                 <TextBox   Text="{Binding District, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="1" Grid.Column="1" Margin="2,4" FontSize="14"/>
 
                 <TextBlock Text="授證日" Grid.Row="2" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
-                <DatePicker SelectedDate="{Binding CharterDate, Mode=TwoWay}" Grid.Row="2" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left" FontSize="14"/>
+                <DatePicker SelectedDate="{Binding CharterDate, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="2" Grid.Column="1" Margin="2,4" HorizontalAlignment="Left" FontSize="14" FirstDayOfWeek="Monday"/>
 
                 <TextBlock Text="聯絡人" Grid.Row="3" Grid.Column="0" Margin="2,4" FontSize="14" FontWeight="Bold" Foreground="#1A4789"/>
                 <TextBox   Text="{Binding Contact, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" Grid.Row="3" Grid.Column="1" Margin="2,4" Width="200" HorizontalAlignment="Left" FontSize="14"/>
