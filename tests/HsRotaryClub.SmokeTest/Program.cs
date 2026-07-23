@@ -309,6 +309,11 @@ internal static class Program
                             // accept: this file has the migration constant by design (v0.29).
                             continue;
                         }
+                        // v0.55: SeedData.MigrateLegacySeedNames 也有 legacy seed name (用於啟動時 migrate)
+                        if (f.EndsWith("SeedData.cs"))
+                        {
+                            continue;
+                        }
                         totalHits++;
                         hits.Add(Path.GetFileName(f));
                     }

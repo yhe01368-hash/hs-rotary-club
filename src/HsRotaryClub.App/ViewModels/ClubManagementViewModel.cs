@@ -86,7 +86,7 @@ public partial class ClubManagementViewModel : ObservableObject
     {
         try
         {
-            MigrateLegacySeedNames();
+            // v0.55: MigrateLegacySeedNames 只在 DbInitializer 跑一次,不要在每次 Reload 跑
             Clubs.Clear();
             var q = _db.Clubs.AsNoTracking().AsQueryable();
             q = ShowInactiveOnly ? q.Where(c => !c.IsActive) : q.Where(c => c.IsActive);

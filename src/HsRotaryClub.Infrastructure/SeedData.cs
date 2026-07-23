@@ -84,6 +84,30 @@ public static class SeedData
             db.Users.AddRange(DemoUsers);
             db.SaveChanges();
         }
+
+        // v0.55: 啟動時跑一次 legacy seed name 遷移 (把舊 db 的「豐原西南扶輪社」改成 generic「示範扶輪社」)
+        MigrateLegacySeedNames(db);
+    }
+
+    /// <summary>v0.55: 把 db 內舊版的「豐原西南扶輪社」seed name 改成 generic「示範扶輪社」,避免多筆重名.</summary>
+    private const string LegacySeedName = "豐原西南扶輪社";
+    private const string GenericSeedName = "示範扶輪社";
+    public static void MigrateLegacySeedNames(RotaryDbContext db)
+    {
+        try
+        {
+            var targets = db.Clubs.Where(c => c.Name == LegacySeedName).ToList();
+            if (targets.Count == 0) return;
+            foreach (var c in targets)
+            {
+                c.Name = GenericSeedName;
+            }
+            db.SaveChanges();
+        }
+        catch
+        {
+            // best-effort,don't crash startup if migration fails
+        }
     }
 }
 
