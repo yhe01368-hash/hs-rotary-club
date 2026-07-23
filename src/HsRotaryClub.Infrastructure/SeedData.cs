@@ -28,6 +28,8 @@ public static class SeedData
         new() { Code = 121, Name = "呂維國", EnglishName = "LU-WEI-KUO",  Birthday = new(1965, 3, 12), IdNumber = "L123456789", Occupation = "營造業", Mobile = "0912-345-678", Email = "lu@example.com", Rid = "10000021", GroupNo = "0401", JoinDate = new(2018, 7, 1) },
         new() { Code = 124, Name = "劉增郎", EnglishName = "LIU-TSENG-LANG", Birthday = new(1972, 8, 5), IdNumber = "L123456790", Occupation = "建築師", Mobile = "0933-111-222", Email = "liu@example.com", Rid = "10000024", GroupNo = "0402", JoinDate = new(2019, 1, 12) },
         new() { Code = 139, Name = "吳丞晏", EnglishName = "WU-CHENG-YAN", Birthday = new(1997, 7, 23), IdNumber = "L125295578", Occupation = "不動產仲介", EmployerName = "台慶不動產", EmployerTitle = "業務專員", EmployerAddress = "臺中市北屯區崇德五路367號", EmployerZip = "406022", HomeAddress = "臺中市豐原區成功路600號", HomeZip = "420014", GroupNo = "0410", JoinDate = new(2024, 12, 5), Mobile = "0923-658-786", Email = "hans07231997@gmail.com", Rid = "12213492", SortOrder = 1 },
+        // v0.56: 測試未繳社員 — MemberLookupDialog 應變藍色 (IsOverdue=true)
+        new() { Code = 999, Name = "測試未繳", EnglishName = "TEST-UNPAID", Birthday = new(1980, 5, 15), IdNumber = "T999999999", Occupation = "測試員", Mobile = "0900-000-999", Email = "test-unpaid@example.com", GroupNo = "0411", JoinDate = new(2024, 1, 1), IsCurrent = true },
     };
 
     public static readonly FriendlyClub[] DemoFriendlyClubs =
