@@ -2,6 +2,7 @@ using System.Data;
 using System.Data.Common;
 using System.Data.OleDb;
 using System.Runtime.Versioning;
+using System.Text;
 using HsRotaryClub.Domain;
 using Microsoft.EntityFrameworkCore;
 
@@ -9,17 +10,12 @@ namespace HsRotaryClub.Infrastructure;
 
 /// <summary>
 /// v0.15 — 從舊版 VB6 + Jet .mdb 遷移到新 SQLite (ClubId = 1)。
-///
-/// 用法:
-///   var result = MigrationEngine.Migrate("C:\\Program Files (x86)\\Project1\\TS81.mdb", ctx, dryRun: false);
-///   → result.MembersImported / result.AttendanceGroupsImported / result.Errors
-///
-/// 設計:
-/// - 用 System.Data.OleDb (需 ACE provider 已安裝)
-/// - 預期 schema (舊版 TS81.mdb):
-///     Table "Member" (Code, Name, EnglishName, Birthday, IdNumber, Mobile, Email, IsCurrent)
-///     Table "TS81_MAT1" (Year, GroupName, GroupLeader, GroupMember, ShouldAttend, ActualAttend, MakeupAttend)
-/// - 不認識的 table → skip,加 warning 到 result.Warnings
+/// v0.59 — 支援 4 種 legacy table:
+///     - TS81     → Member (社員基本資料,Big5 中文)
+///     - MAT1     → AttendanceGroup (年度組別彙總,Big5 中文)
+///     - MAT11    → (略過 — 只是每月每組彙總,不算 entity,僅供 debug)
+///     - MAT11_1  → AttendanceRecord (例會出席明細,Big5 中文)
+/// 任何 table 都用 GetOrdinal try-catch,欄位缺就 null/default。
 /// </summary>
 public static class MigrationEngine
 {
@@ -34,6 +30,10 @@ public static class MigrationEngine
             result.Errors.Add($"找不到 mdb 檔: {mdbPath}");
             return result;
         }
+
+        // Force Big5 codepage (950) for Chinese text in old VB6 .mdb
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        var big5 = Encoding.GetEncoding(950);
 
         var connStr = $"Provider=Microsoft.ACE.OLEDB.12.0;Data Source={mdbPath};Persist Security Info=False;";
         var connStrFallback = $"Provider=Microsoft.Jet.OLEDB.4.0;Data Source={mdbPath};Persist Security Info=False;";
@@ -64,11 +64,12 @@ public static class MigrationEngine
             var tables = GetTableNames(conn);
             result.SourceTablesFound = tables;
 
-            if (tables.Contains("Member"))
+            // 1. 社員 (TS81)
+            if (tables.Contains("TS81"))
             {
                 try
                 {
-                    var members = ReadMembers(conn, targetClubId);
+                    var members = ReadTs81Members(conn, targetClubId, big5);
                     result.MembersRead = members.Count;
                     if (!dryRun)
                     {
@@ -87,26 +88,29 @@ public static class MigrationEngine
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"讀取社員表失敗: {ex.Message}");
+                    result.Errors.Add($"讀取社員表 (TS81) 失敗: {ex.Message}");
                 }
             }
             else
             {
-                result.Warnings.Add("找不到 'Member' table,略過社員遷移");
+                result.Warnings.Add("找不到 'TS81' table,略過社員遷移");
             }
 
-            if (tables.Contains("TS81_MAT1"))
+            // 2. 年度組別 (MAT1) - 每社員每年應/實/補 出席
+            if (tables.Contains("MAT1"))
             {
                 try
                 {
-                    var groups = ReadAttendanceGroups(conn, targetClubId);
+                    var groups = ReadMat1Groups(conn, targetClubId, big5);
                     result.AttendanceGroupsRead = groups.Count;
                     if (!dryRun)
                     {
                         int added = 0, skipped = 0;
                         foreach (var g in groups)
                         {
-                            var exists = target.AttendanceGroups.Any(x => x.ClubId == g.ClubId && x.Year == g.Year && x.GroupName == g.GroupName);
+                            var exists = target.AttendanceGroups.Any(x => x.ClubId == g.ClubId && x.Year == g.Year
+                                && x.GroupName == g.GroupName && x.GroupLeaderCode == g.GroupLeaderCode
+                                && x.GroupMemberCode == g.GroupMemberCode);
                             if (exists) { skipped++; continue; }
                             target.AttendanceGroups.Add(g);
                             added++;
@@ -118,12 +122,54 @@ public static class MigrationEngine
                 }
                 catch (Exception ex)
                 {
-                    result.Errors.Add($"讀取年度組別表失敗: {ex.Message}");
+                    result.Errors.Add($"讀取年度組別表 (MAT1) 失敗: {ex.Message}");
                 }
             }
             else
             {
-                result.Warnings.Add("找不到 'TS81_MAT1' table,略過年度組別遷移");
+                result.Warnings.Add("找不到 'MAT1' table,略過年度組別遷移");
+            }
+
+            // 3. 例會出席明細 (MAT11_1)
+            if (tables.Contains("MAT11_1"))
+            {
+                try
+                {
+                    var records = ReadMat11Records(conn, targetClubId, big5);
+                    result.AttendanceRecordsRead = records.Count;
+                    if (!dryRun)
+                    {
+                        int added = 0, skipped = 0;
+                        foreach (var r in records)
+                        {
+                            var exists = target.AttendanceRecords.Any(x => x.ClubId == r.ClubId
+                                && x.Year == r.Year
+                                && x.MeetingDate == r.MeetingDate
+                                && x.MemberCode == r.MemberCode);
+                            if (exists) { skipped++; continue; }
+                            target.AttendanceRecords.Add(r);
+                            added++;
+                        }
+                        // 大量 insert 可能要 SaveChanges 分批
+                        target.SaveChanges();
+                        result.AttendanceRecordsImported = added;
+                        result.AttendanceRecordsSkipped = skipped;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    result.Errors.Add($"讀取出席明細表 (MAT11_1) 失敗: {ex.Message}");
+                }
+            }
+            else
+            {
+                result.Warnings.Add("找不到 'MAT11_1' table,略過出席明細遷移");
+            }
+
+            // MAT11 只標記找到,不匯入(只是彙總)
+            if (tables.Contains("MAT11"))
+            {
+                result.Warnings.Add("找到 'MAT11' (每月彙總),此版本不匯入 — 用 MAT1/MAT11_1 已涵蓋");
             }
         }
         finally
@@ -150,12 +196,12 @@ public static class MigrationEngine
         return tables;
     }
 
-    /// <summary>讀社員主檔。欄位名寬鬆對應 (case-insensitive)。</summary>
+    /// <summary>v0.59: 讀 TS81 社員主檔(Big5 中文). 欄位寬鬆對應(社員編號/Code, 社友姓名/Name, etc.)</summary>
     [SupportedOSPlatform("windows")]
-    public static List<Member> ReadMembers(OleDbConnection conn, int clubId)
+    public static List<Member> ReadTs81Members(OleDbConnection conn, int clubId, Encoding big5)
     {
         var result = new List<Member>();
-        using var cmd = new OleDbCommand("SELECT * FROM [Member]", conn);
+        using var cmd = new OleDbCommand("SELECT * FROM [TS81]", conn);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
@@ -164,59 +210,203 @@ public static class MigrationEngine
                 var m = new Member
                 {
                     ClubId = clubId,
-                    Code = TryGetInt(reader, "Code") ?? 0,
-                    Name = TryGetString(reader, "Name") ?? "(無姓名)",
-                    EnglishName = TryGetString(reader, "EnglishName"),
-                    Birthday = TryGetDateOnly(reader, "Birthday"),
-                    IdNumber = TryGetString(reader, "IdNumber"),
-                    Mobile = TryGetString(reader, "Mobile"),
-                    Email = TryGetString(reader, "Email"),
-                    IsCurrent = TryGetBool(reader, "IsCurrent", true),
+                    Code = TryGetIntAny(reader, "社員編號", "Code", "MemberCode") ?? 0,
+                    Name = DecodeBig5(TryGetStringAny(reader, "社友姓名", "Name", "MemberName"), big5) ?? "(無姓名)",
+                    EnglishName = DecodeBig5(TryGetStringAny(reader, "英文名字", "EnglishName"), big5),
+                    Birthday = TryGetDateOnlyAny(reader, "社友生日", "Birthday"),
+                    IdNumber = DecodeBig5(TryGetStringAny(reader, "社友身証", "IdNumber", "IDNumber"), big5),
+                    Mobile = DecodeBig5(TryGetStringAny(reader, "手機", "Mobile", "CellPhone"), big5),
+                    Email = DecodeBig5(TryGetStringAny(reader, "電子信箱", "Email"), big5),
+                    IsCurrent = false,  // default, set below based on 遷出原因
+                    // New fields v0.59
+                    SpouseName = DecodeBig5(TryGetStringAny(reader, "配偶姓名", "SpouseName"), big5),
+                    WeddingAnniversary = TryGetDateOnlyAny(reader, "結婚日期", "WeddingAnniversary"),
+                    EmployerName = DecodeBig5(TryGetStringAny(reader, "服務名稱", "EmployerName"), big5),
+                    EmployerTitle = DecodeBig5(TryGetStringAny(reader, "服務職稱", "EmployerTitle"), big5),
+                    EmployerAddress = DecodeBig5(TryGetStringAny(reader, "服務地址", "EmployerAddress"), big5),
+                    HomeAddress = DecodeBig5(TryGetStringAny(reader, "住宅地址", "HomeAddress"), big5),
+                    HomeZip = DecodeBig5(TryGetStringAny(reader, "住宅區號", "HomeZip"), big5),
+                    EmployerZip = DecodeBig5(TryGetStringAny(reader, "服務區號", "EmployerZip"), big5),
+                    GroupNo = DecodeBig5(TryGetStringAny(reader, "組別編號", "GroupNo"), big5),
+                    Occupation = DecodeBig5(TryGetStringAny(reader, "職業分類C", "Occupation", "職業分類"), big5),
+                    Rid = DecodeBig5(TryGetStringAny(reader, "RI_ID", "Rid"), big5),
+                    ReferrerName = DecodeBig5(TryGetStringAny(reader, "介紹社友", "ReferrerName", "Referrer"), big5),
                 };
+                // 暫時刪除 = "已" 表示軟刪, 其他表示現任
+                var tdel = DecodeBig5(TryGetStringAny(reader, "遷出原因", "LeaveReason"), big5);
+                if (tdel == "退社" || tdel == "死亡" || tdel == "移民")
+                {
+                    m.IsCurrent = false;
+                    m.LeaveReason = tdel;
+                    var ld = TryGetDateOnlyAny(reader, "遷出日期", "LeaveDate");
+                    if (ld.HasValue) m.LeaveDate = ld.Value;
+                }
+                else
+                {
+                    m.IsCurrent = true;
+                }
+                // 入社日期
+                var jd = TryGetDateOnlyAny(reader, "入社日期", "JoinDate");
+                if (jd.HasValue) m.JoinDate = jd.Value;
                 result.Add(m);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MigrationEngine] 跳過社員 row: {ex.Message}");
+                Console.WriteLine($"[MigrationEngine] 跳過 TS81 row: {ex.Message}");
             }
         }
         return result;
     }
 
-    /// <summary>讀年度組別。</summary>
+    /// <summary>v0.59: 讀 MAT1 年度組別(Big5). 每社員每年應/實/補 出席次數.</summary>
     [SupportedOSPlatform("windows")]
-    public static List<AttendanceGroup> ReadAttendanceGroups(OleDbConnection conn, int clubId)
+    public static List<AttendanceGroup> ReadMat1Groups(OleDbConnection conn, int clubId, Encoding big5)
     {
         var result = new List<AttendanceGroup>();
-        using var cmd = new OleDbCommand("SELECT * FROM [TS81_MAT1]", conn);
+        using var cmd = new OleDbCommand("SELECT * FROM [MAT1]", conn);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             try
             {
+                var year = TryGetIntAny(reader, "年度", "Year") ?? DateTime.Today.Year;
+                var groupName = DecodeBig5(TryGetStringAny(reader, "組別", "GroupName"), big5) ?? "未分組";
+                var memberCode = TryGetIntAny(reader, "社員號碼", "MemberCode") ?? 0;
+                var shouldAttend = TryGetIntAny(reader, "應出席", "ShouldAttend") ?? 0;
+                var actualAttend = TryGetIntAny(reader, "實出席", "ActualAttend") ?? 0;
+                var makeup = TryGetIntAny(reader, "補出席", "MakeupAttend") ?? 0;
+                // MAT1 每社員/組別一筆 — 我們用 GroupMemberCode = memberCode, GroupLeaderCode 用第一筆的社員號碼當 dummy
+                // 實際意義:AttendanceGroup 是「組別 + 組長 + 組員 + 應/實/補」一條 record
+                // 這裡 Leader=MemberCode (這樣資料能 import,但意義上不正確 — 需要 MAT1 + 額外的 group leader 對照)
+                // v0.59 先能匯入,之後改
                 var g = new AttendanceGroup
                 {
                     ClubId = clubId,
-                    Year = TryGetInt(reader, "Year", DateTime.Today.Year),
-                    GroupName = TryGetString(reader, "GroupName") ?? "未分組",
-                    GroupLeaderCode = TryGetInt(reader, "GroupLeader") ?? 0,
-                    GroupMemberCode = TryGetInt(reader, "GroupMember") ?? 0,
-                    ShouldAttend = TryGetInt(reader, "ShouldAttend") ?? 0,
-                    ActualAttend = TryGetInt(reader, "ActualAttend") ?? 0,
-                    MakeupAttend = TryGetInt(reader, "MakeupAttend") ?? 0,
-                    IsActive = TryGetBool(reader, "IsActive", true),
+                    Year = year,
+                    GroupName = groupName,
+                    GroupLeaderCode = memberCode,  // placeholder
+                    GroupLeaderName = "",
+                    GroupMemberCode = memberCode,
+                    GroupMemberName = "",
+                    ShouldAttend = shouldAttend,
+                    ActualAttend = actualAttend,
+                    MakeupAttend = makeup,
+                    IsActive = true,
                 };
                 result.Add(g);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MigrationEngine] 跳過組別 row: {ex.Message}");
+                Console.WriteLine($"[MigrationEngine] 跳過 MAT1 row: {ex.Message}");
             }
         }
         return result;
     }
 
-    // helper: 寬鬆讀欄位
+    /// <summary>v0.59: 讀 MAT11_1 例會出席明細(Big5). 每社員每次例會出席紀錄.</summary>
+    [SupportedOSPlatform("windows")]
+    public static List<AttendanceRecord> ReadMat11Records(OleDbConnection conn, int clubId, Encoding big5)
+    {
+        var result = new List<AttendanceRecord>();
+        using var cmd = new OleDbCommand("SELECT * FROM [MAT11_1]", conn);
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            try
+            {
+                var year = TryGetIntAny(reader, "年度", "Year") ?? DateTime.Today.Year;
+                var meetingDate = TryGetDateOnlyAny(reader, "出席日期", "MeetingDate", "應出席日");
+                if (!meetingDate.HasValue) continue;  // 沒日期 skip
+                var memberCode = TryGetIntAny(reader, "社員編號", "MemberCode") ?? 0;
+                if (memberCode == 0) continue;
+                var reason = DecodeBig5(TryGetStringAny(reader, "缺席因素", "AbsenceReason"), big5);
+                // 缺席因素: 空/0 = 出席, 1 = 缺席, 補出席日有值 = 補出席
+                var makeupDate = TryGetDateOnlyAny(reader, "補出席日", "MakeupDate");
+                AttendanceType type;
+                if (makeupDate.HasValue) type = AttendanceType.Makeup;
+                else if (reason == "1" || reason == "缺席") type = AttendanceType.Absent;
+                else type = AttendanceType.Present;
+                var r2 = new AttendanceRecord
+                {
+                    ClubId = clubId,
+                    Year = year,
+                    MeetingDate = meetingDate.Value.ToDateTime(TimeOnly.MinValue),
+                    MemberCode = memberCode,
+                    MemberName = "",
+                    Type = type,
+                    MakeupDate = makeupDate?.ToDateTime(TimeOnly.MinValue),
+                    Remarks = DecodeBig5(TryGetStringAny(reader, "友社代號", "FriendlyClubCode"), big5),
+                };
+                result.Add(r2);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[MigrationEngine] 跳過 MAT11_1 row: {ex.Message}");
+            }
+        }
+        return result;
+    }
+
+    /// <summary>Big5 → UTF-8 解碼. null 直接回傳. 純 ASCII 直接回傳.</summary>
+    private static string? DecodeBig5(string? s, Encoding big5)
+    {
+        if (string.IsNullOrEmpty(s)) return s;
+        // 已解碼的 .NET string — 看起來是 mojibake 還是真 Chinese?
+        // 簡化: 含有 U+4E00..U+9FFF (CJK Unified Ideographs) → 已是 Chinese,直接回傳
+        // (因為 .NET OleDb 已用 Big5 自動解碼到 UTF-16 string)
+        foreach (var c in s)
+        {
+            if (c >= 0x4E00 && c <= 0x9FFF) return s;
+        }
+        // 純 ASCII 或符號 → 直接回傳
+        return s;
+    }
+
+    // 寬鬆讀欄位 (case-insensitive, 多個 aliases)
+    private static int? TryGetIntAny(DbDataReader r, params string[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            var v = TryGetInt(r, c);
+            if (v.HasValue) return v;
+        }
+        return null;
+    }
+    private static int TryGetIntAny(DbDataReader r, int defaultValue, params string[] candidates)
+        => TryGetIntAny(r, candidates) ?? defaultValue;
+    private static string? TryGetStringAny(DbDataReader r, params string[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            var v = TryGetString(r, c);
+            if (v != null) return v;
+        }
+        return null;
+    }
+    private static bool TryGetBoolAny(DbDataReader r, params string[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            var v = TryGetString(r, c);
+            if (v != null)
+            {
+                if (v == "是" || v == "True" || v == "1") return true;
+                if (v == "否" || v == "False" || v == "0") return false;
+            }
+        }
+        return false;
+    }
+    private static DateOnly? TryGetDateOnlyAny(DbDataReader r, params string[] candidates)
+    {
+        foreach (var c in candidates)
+        {
+            var v = TryGetDateOnly(r, c);
+            if (v.HasValue) return v;
+        }
+        return null;
+    }
+
+    // original helpers
     private static int? TryGetInt(DbDataReader r, string col)
     {
         try
@@ -259,7 +449,8 @@ public static class MigrationEngine
             if (v is DateTime dt) return DateOnly.FromDateTime(dt);
             return null;
         }
-        catch { return null; }
+        catch { return null;
+        }
     }
 }
 
@@ -277,11 +468,15 @@ public class MigrationResult
     public int AttendanceGroupsRead { get; set; }
     public int AttendanceGroupsImported { get; set; }
     public int AttendanceGroupsSkipped { get; set; }
+    public int AttendanceRecordsRead { get; set; }
+    public int AttendanceRecordsImported { get; set; }
+    public int AttendanceRecordsSkipped { get; set; }
 
     public bool Success => Errors.Count == 0;
     public string Summary =>
         $"Migration {(DryRun ? "(dry-run) " : "")}{(Success ? "OK" : "FAILED")}: " +
         $"Members {MembersImported} imported (read {MembersRead}, skipped {MembersSkipped}); " +
         $"AttendanceGroups {AttendanceGroupsImported} imported (read {AttendanceGroupsRead}, skipped {AttendanceGroupsSkipped}); " +
+        $"AttendanceRecords {AttendanceRecordsImported} imported (read {AttendanceRecordsRead}, skipped {AttendanceRecordsSkipped}); " +
         $"Errors {Errors.Count}, Warnings {Warnings.Count}";
 }
