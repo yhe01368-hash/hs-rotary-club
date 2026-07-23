@@ -4,9 +4,12 @@
              xmlns:local="clr-namespace:HsRotaryClub.App"
              xmlns:vm="clr-namespace:HsRotaryClub.App.ViewModels"
              xmlns:views="clr-namespace:HsRotaryClub.App.Views"
+             xmlns:infra="clr-namespace:HsRotaryClub.App.Infrastructure"
              xml:lang="zh-TW">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- v0.58: DateOnly? ↔ DateTime? converter for DatePicker binding (Club.CharterDate is DateOnly?) -->
+            <infra:DateOnlyToDateTimeConverter x:Key="DateOnlyToDateTime"/>
             <!-- v0.17: global CJK FontFamily fallback chain (繁中 → 日文 → 簡中 → 英文) -->
             <FontFamily x:Key="AppFontFamily">Microsoft JhengHei, Microsoft YaHei, Meiryo, SimSun, Segoe UI</FontFamily>
             <Style TargetType="{x:Type Window}">
