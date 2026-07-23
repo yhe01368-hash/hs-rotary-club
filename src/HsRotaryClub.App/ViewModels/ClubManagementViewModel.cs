@@ -140,6 +140,9 @@ public partial class ClubManagementViewModel : ObservableObject
         }
         StatusMessage = $"已儲存 {attached.Name}";
         Reload();
+        // v0.54: 儲存後清掉 Selected,避免下一次操作覆蓋剛儲存或誤切到 seed 那筆
+        Selected = null;
+        StatusMessage = $"已儲存 {attached.Name},可繼續編輯或新增";
     }
 
     [RelayCommand]
