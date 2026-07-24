@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
     <RootNamespace>HsRotaryClub.SmokeTest</RootNamespace>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <PlatformTarget>x86</PlatformTarget>  <!-- v0.59: needed for ACE.OLEDB 32-bit -->
     <Authors>Chia Chang</Authors>
     <Company>HsRotaryClub</Company>
     <Description>SmokeTest — 5 CRUD round-trip 用例</Description>

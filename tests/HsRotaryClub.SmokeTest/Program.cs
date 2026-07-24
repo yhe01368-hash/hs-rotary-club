@@ -75,6 +75,7 @@ internal static class Program
         await T62_CollectorAutoDefault();
         await T63_CollectorGuardSimplified();
         await T64_MigrationBig5Mapping();
+        await T65_RealMdbImport();
 
         Console.WriteLine();
         Console.WriteLine($"=== {_pass} passed, {_fail} failed ===");
@@ -131,6 +132,66 @@ internal static class Program
             // Simulate TS81 column name alias chain — verify the dictionary of aliases is structurally correct
             // by invoking a fake test path: this just checks the methods compile, not runtime behavior.
             Assert(true, "MigrationEngine v0.59 mappings verified at compile-time");
+        });
+    }
+
+    private static async Task T65_RealMdbImport()
+    {
+        // v0.59: 真正 import 祐哥的 3 個 mdb 檔 (TS81 + MAT1 + MAT11_1)
+        // 路徑寫死 (Production: C:\Program Files (x86)\Project1\備份MDB\桌機\Mdb20250611)
+        var dir = Path.Combine(
+            @"C:\Program Files (x86)\Project1\備份MDB\桌機\Mdb20250611");
+        if (!Directory.Exists(dir))
+        {
+            Console.WriteLine($"  [SKIP] mdb dir not found: {dir}");
+            return;
+        }
+
+        await Run("T65 v0.59: import real 祐哥 TS81+MAT1+MAT11_1 mdb files", () =>
+        {
+            var files = new[] { "TS81.mdb", "MAT1.mdb", "MAT11_1.mdb" };
+            var totalImported = 0;
+            // Use a shared db path so all 3 imports land in same SQLite
+            var dbPath = Path.Combine(Path.GetTempPath(), $"smoketest-mdb-import-{Guid.NewGuid():N}.db");
+            try
+            {
+                var optsBuilder = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<RotaryDbContext>();
+                optsBuilder.UseSqlite($"Data Source={dbPath}");
+                using (var ctx = new RotaryDbContext(optsBuilder.Options))
+                {
+                    ctx.Database.EnsureCreated();
+                    SeedData.SeedIfEmpty(ctx);
+
+                    foreach (var f in files)
+                    {
+                        var p = Path.Combine(dir, f);
+                        if (!File.Exists(p))
+                        {
+                            Console.WriteLine($"  [skip] {f} missing");
+                            continue;
+                        }
+                        var r = MigrationEngine.Migrate(p, ctx, targetClubId: 1, dryRun: false);
+                        Console.WriteLine($"  {f}: {r.Summary}");
+                        totalImported += r.MembersImported + r.AttendanceGroupsImported + r.AttendanceRecordsImported;
+                        Assert(r.Success || r.Errors.Count <= 1, $"{f} fatal: {string.Join(" | ", r.Errors)}");
+                    }
+                    // 至少要有社員 138 筆(祐哥 TS81)
+                    var memberCount = ctx.Members.Count();
+                    var groupCount = ctx.AttendanceGroups.Count();
+                    var recordCount = ctx.AttendanceRecords.Count();
+                    Console.WriteLine($"  total Members={memberCount}, AttendanceGroups={groupCount}, AttendanceRecords={recordCount}");
+                    Assert(memberCount >= 138, $"expected >=138 members from TS81, got {memberCount}");
+                    Assert(groupCount >= 1500, $"expected >=1500 attendance groups from MAT1, got {groupCount}");
+                }
+            }
+            finally
+            {
+                if (File.Exists(dbPath))
+                {
+                    System.Threading.Thread.Sleep(100);
+                    try { File.Delete(dbPath); } catch { /* ignore */ }
+                }
+            }
         });
     }
 

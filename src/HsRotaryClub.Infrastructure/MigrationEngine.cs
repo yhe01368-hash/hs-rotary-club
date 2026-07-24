@@ -130,7 +130,7 @@ public static class MigrationEngine
                 result.Warnings.Add("找不到 'MAT1' table,略過年度組別遷移");
             }
 
-            // 3. 例會出席明細 (MAT11_1)
+            // 3. 例會出席明細 (MAT11_1) — 用 batch SaveChanges 避免 SQLite parameter limit (75K rows)
             if (tables.Contains("MAT11_1"))
             {
                 try
@@ -139,9 +139,13 @@ public static class MigrationEngine
                     result.AttendanceRecordsRead = records.Count;
                     if (!dryRun)
                     {
+                        const int BATCH = 1000;  // SQLite max ~32K params ÷ ~30 fields = ~1K rows
                         int added = 0, skipped = 0;
+                        var seen = new HashSet<(int Year, DateTime Date, int Code)>();  // dedup in-batch
                         foreach (var r in records)
                         {
+                            var key = (r.Year, r.MeetingDate, r.MemberCode);
+                            if (!seen.Add(key)) { skipped++; continue; }
                             var exists = target.AttendanceRecords.Any(x => x.ClubId == r.ClubId
                                 && x.Year == r.Year
                                 && x.MeetingDate == r.MeetingDate
@@ -149,8 +153,8 @@ public static class MigrationEngine
                             if (exists) { skipped++; continue; }
                             target.AttendanceRecords.Add(r);
                             added++;
+                            if (added % BATCH == 0) target.SaveChanges();
                         }
-                        // 大量 insert 可能要 SaveChanges 分批
                         target.SaveChanges();
                         result.AttendanceRecordsImported = added;
                         result.AttendanceRecordsSkipped = skipped;
@@ -402,6 +406,16 @@ public static class MigrationEngine
         {
             var v = TryGetDateOnly(r, c);
             if (v.HasValue) return v;
+            // 試 string parse (legacy mdb 文字欄位)
+            try
+            {
+                var ord = r.GetOrdinal(c);
+                if (r.IsDBNull(ord)) continue;
+                var raw = r.GetValue(ord);
+                if (raw is string s && DateOnly.TryParse(s, out var d)) return d;
+                if (raw is DateTime dt2) return DateOnly.FromDateTime(dt2);
+            }
+            catch { }
         }
         return null;
     }
